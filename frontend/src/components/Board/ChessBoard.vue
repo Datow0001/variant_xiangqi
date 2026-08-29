@@ -8,22 +8,39 @@ import EnemyIntel from './EnemyIntel.vue';
 
 const store = useGameStore();
 
-// 將當前 FEN 轉為 10x9 矩陣 (row 0 為 Rank 9，row 9 為 Rank 0)
 const boardMatrix = computed(() => {
   if (!store.gameState) return [];
   return fenToBoard(store.gameState.fen);
 });
 
-// 是否為翻轉視角 (玩家執黑時翻轉)
 const isFlipped = computed(() => store.isFlipped);
 
-// 產生格點座標陣列
-// displayRows: 0 ~ 9 畫面由上而下的列
-// displayCols: 0 ~ 8 畫面由左而右的欄
-const displayRows = computed(() => [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
-const displayCols = computed(() => [0, 1, 2, 3, 4, 5, 6, 7, 8]);
+// 9 欄 (0~8) 與 10 列 (0~9)
+const displayRows = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+const displayCols = [0, 1, 2, 3, 4, 5, 6, 7, 8];
 
-// 畫面格點 (r, c) 轉為系統 (col, row) 與 UCI 座標 (如 "b0")
+// SVG 內部坐標參數 (viewBox: 0 0 560 620)
+const PADDING_X = 40;
+const PADDING_Y = 40;
+const STEP_X = 60;
+const STEP_Y = 60;
+
+function getX(c: number): number {
+  return PADDING_X + c * STEP_X;
+}
+
+function getY(r: number): number {
+  return PADDING_Y + r * STEP_Y;
+}
+
+function getPctX(c: number): number {
+  return (getX(c) / 560) * 100;
+}
+
+function getPctY(r: number): number {
+  return (getY(r) / 620) * 100;
+}
+
 function getUciFromDisplay(displayRow: number, displayCol: number): string {
   let col: number;
   let row: number;
@@ -39,26 +56,22 @@ function getUciFromDisplay(displayRow: number, displayCol: number): string {
   return posToUci(col, row);
 }
 
-// 根據系統 UCI 坐標取得該位置的棋子字元
 function getPieceAt(uci: string): string {
   if (!boardMatrix.value.length) return '.';
   const col = uci.charCodeAt(0) - 97;
   const row = parseInt(uci.substring(1), 10);
-  const rowIndex = 9 - row; // 陣列 row 0 代表 Rank 9
+  const rowIndex = 9 - row;
   return boardMatrix.value[rowIndex]?.[col] || '.';
 }
 
-// 是否為選中格
 function isSelected(uci: string): boolean {
   return store.selectedSquare === uci;
 }
 
-// 是否為合法目標點
 function isLegalTarget(uci: string): boolean {
   return store.currentLegalMovesForSelected.some((m) => m.to === uci);
 }
 
-// 是否為最後一步的起點或終點
 function isLastMove(uci: string): boolean {
   if (!store.gameState?.lastMove) return false;
   return (
@@ -66,7 +79,6 @@ function isLastMove(uci: string): boolean {
   );
 }
 
-// 是否為變體棋子 (U, F, M, S, u, f, m, s)
 function isUpgradedPiece(char: string): boolean {
   return 'UFMSufms'.includes(char);
 }
@@ -117,95 +129,226 @@ function isUpgradedPiece(char: string): boolean {
       </div>
     </div>
 
-    <!-- 主區塊：棋盤與敵方情報 -->
+    <!-- 主區塊：棋盤與側欄情報 -->
     <div class="grid lg:grid-cols-[1fr_320px] gap-8 items-start">
-      <!-- 象棋棋盤 -->
+      <!-- 傳統標準象棋棋盤 -->
       <div class="relative flex flex-col items-center">
         <!-- 被將軍警戒橫幅 -->
         <div
           v-if="store.gameState?.isCheck && !store.gameState?.isGameOver"
-          class="absolute -top-4 z-20 bg-red-600 text-white text-xs font-black px-4 py-1 rounded-full shadow-lg animate-bounce uppercase tracking-wider"
+          class="absolute -top-4 z-30 bg-red-600 text-white text-xs font-black px-4 py-1 rounded-full shadow-lg animate-bounce uppercase tracking-wider"
         >
           ⚠️ 將軍！
         </div>
 
-        <!-- 棋盤外框木紋底板 -->
-        <div class="bg-amber-100 p-4 sm:p-6 rounded-2xl shadow-2xl border-4 border-amber-900/60 relative select-none">
-          <!-- 棋盤 9x10 網格層 -->
-          <div class="relative w-[340px] h-[378px] sm:w-[480px] sm:h-[533px] md:w-[540px] md:h-[600px] border border-amber-900/40">
-            <!-- 繪製楚河漢界 (第 4 與第 5 列之間) -->
-            <div class="absolute inset-x-0 top-[45%] h-[10%] flex items-center justify-around pointer-events-none text-amber-900/50 font-serif font-black text-xl sm:text-2xl">
-              <span>楚 河</span>
-              <span>漢 界</span>
-            </div>
+        <!-- 棋盤容器 -->
+        <div class="relative w-[340px] sm:w-[480px] md:w-[520px] aspect-[560/620] bg-amber-100/95 rounded-2xl shadow-2xl p-2 select-none border-2 border-amber-950/70">
+          <!-- 1. 底層標準 SVG 盤線繪製 (精確 9x10 幾何) -->
+          <svg
+            viewBox="0 0 560 620"
+            class="absolute inset-0 w-full h-full pointer-events-none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <!-- 外部雙邊裝飾框 -->
+            <rect
+              x="26"
+              y="26"
+              width="508"
+              height="568"
+              fill="none"
+              stroke="#6b3710"
+              stroke-width="3.5"
+              rx="6"
+            />
+            <rect
+              :x="getX(0)"
+              :y="getY(0)"
+              :width="STEP_X * 8"
+              :height="STEP_Y * 9"
+              fill="none"
+              stroke="#7c3f13"
+              stroke-width="2"
+            />
 
-            <!-- 棋盤格點點選區域 (9x10 = 90 格) -->
-            <div class="absolute inset-0 grid grid-rows-10 grid-cols-9">
+            <!-- 10 條橫線 (完整橫貫欄 0 到 欄 8) -->
+            <line
+              v-for="r in displayRows"
+              :key="`h-line-${r}`"
+              :x1="getX(0)"
+              :y1="getY(r)"
+              :x2="getX(8)"
+              :y2="getY(r)"
+              stroke="#7c3f13"
+              stroke-width="1.6"
+            />
+
+            <!-- 直線 (左右外邊欄 0 與 8 貫穿楚河漢界) -->
+            <line
+              :x1="getX(0)"
+              :y1="getY(0)"
+              :x2="getX(0)"
+              :y2="getY(9)"
+              stroke="#7c3f13"
+              stroke-width="2"
+            />
+            <line
+              :x1="getX(8)"
+              :y1="getY(0)"
+              :x2="getX(8)"
+              :y2="getY(9)"
+              stroke="#7c3f13"
+              stroke-width="2"
+            />
+
+            <!-- 中間直欄 (欄 1 ~ 7)：楚河漢界中間完全斷開，無任何穿透直線 -->
+            <!-- 上半部 (列 0 ~ 4) -->
+            <line
+              v-for="c in [1, 2, 3, 4, 5, 6, 7]"
+              :key="`v-top-${c}`"
+              :x1="getX(c)"
+              :y1="getY(0)"
+              :x2="getX(c)"
+              :y2="getY(4)"
+              stroke="#7c3f13"
+              stroke-width="1.6"
+            />
+            <!-- 下半部 (列 5 ~ 9) -->
+            <line
+              v-for="c in [1, 2, 3, 4, 5, 6, 7]"
+              :key="`v-bottom-${c}`"
+              :x1="getX(c)"
+              :y1="getY(5)"
+              :x2="getX(c)"
+              :y2="getY(9)"
+              stroke="#7c3f13"
+              stroke-width="1.6"
+            />
+
+            <!-- 帥/將 九宮格斜線 (以粗線 stroke-width="2.6" 繪製斜交叉) -->
+            <!-- 上方九宮格 (列 0~2, 欄 3~5) -->
+            <line
+              :x1="getX(3)"
+              :y1="getY(0)"
+              :x2="getX(5)"
+              :y2="getY(2)"
+              stroke="#7c3f13"
+              stroke-width="2.6"
+            />
+            <line
+              :x1="getX(5)"
+              :y1="getY(0)"
+              :x2="getX(3)"
+              :y2="getY(2)"
+              stroke="#7c3f13"
+              stroke-width="2.6"
+            />
+
+            <!-- 下方九宮格 (列 7~9, 欄 3~5) -->
+            <line
+              :x1="getX(3)"
+              :y1="getY(7)"
+              :x2="getX(5)"
+              :y2="getY(9)"
+              stroke="#7c3f13"
+              stroke-width="2.6"
+            />
+            <line
+              :x1="getX(5)"
+              :y1="getY(7)"
+              :x2="getX(3)"
+              :y2="getY(9)"
+              stroke="#7c3f13"
+              stroke-width="2.6"
+            />
+
+            <!-- 楚河漢界文字 (乾淨印在無直條干擾的河界中) -->
+            <text
+              :x="getX(2)"
+              :y="(getY(4) + getY(5)) / 2 + 8"
+              fill="#854817"
+              font-size="28"
+              font-family="'Noto Serif TC', serif"
+              font-weight="900"
+              text-anchor="middle"
+              letter-spacing="12"
+            >
+              楚河
+            </text>
+            <text
+              :x="getX(6)"
+              :y="(getY(4) + getY(5)) / 2 + 8"
+              fill="#854817"
+              font-size="28"
+              font-family="'Noto Serif TC', serif"
+              font-weight="900"
+              text-anchor="middle"
+              letter-spacing="12"
+            >
+              漢界
+            </text>
+          </svg>
+
+          <!-- 2. 交叉格點互動與棋子層 (精確定位在每個交點中心) -->
+          <div class="absolute inset-0">
+            <div
+              v-for="r in displayRows"
+              :key="`row-${r}`"
+            >
               <div
-                v-for="r in displayRows"
-                :key="`row-${r}`"
-                class="contents"
+                v-for="c in displayCols"
+                :key="`cell-${r}-${c}`"
+                @click="store.selectSquare(getUciFromDisplay(r, c))"
+                class="absolute flex items-center justify-center cursor-pointer group"
+                :style="{
+                  left: `${getPctX(c)}%`,
+                  top: `${getPctY(r)}%`,
+                  width: '10.5%',
+                  height: '9.5%',
+                  transform: 'translate(-50%, -50%)',
+                }"
               >
+                <!-- 最後一步背景光暈 -->
                 <div
-                  v-for="c in displayCols"
-                  :key="`cell-${r}-${c}`"
-                  @click="store.selectSquare(getUciFromDisplay(r, c))"
-                  class="relative flex items-center justify-center cursor-pointer group"
+                  v-if="isLastMove(getUciFromDisplay(r, c))"
+                  class="absolute inset-0 rounded-full bg-amber-400/35 animate-pulse"
+                ></div>
+
+                <!-- 被選中棋子發光光環 -->
+                <div
+                  v-if="isSelected(getUciFromDisplay(r, c))"
+                  class="absolute inset-[-4px] rounded-full ring-4 ring-amber-500 bg-amber-400/30 z-10 animate-pulse pointer-events-none"
+                ></div>
+
+                <!-- 棋子本體 -->
+                <div
+                  v-if="getPieceAt(getUciFromDisplay(r, c)) !== '.'"
+                  class="relative z-10 w-full h-full transition-transform group-hover:scale-105"
                 >
-                  <!-- 十字交叉格線繪製 -->
-                  <div class="absolute inset-0 pointer-events-none flex items-center justify-center">
-                    <!-- 橫線 -->
-                    <div class="absolute w-full h-[1px] bg-amber-900/60"></div>
-                    <!-- 直線 (注意楚河漢界中間斷開，第 4 列底到第 5 列頂) -->
-                    <div
-                      v-if="(c === 0 || c === 8) || (r !== 4)"
-                      class="absolute h-full w-[1px] bg-amber-900/60"
-                    ></div>
-                  </div>
-
-                  <!-- 最後一步背景高亮 -->
-                  <div
-                    v-if="isLastMove(getUciFromDisplay(r, c))"
-                    class="absolute inset-1 rounded-full bg-amber-400/25 pointer-events-none animate-pulse"
-                  ></div>
-
-                  <!-- 被選中棋子高亮 -->
-                  <div
-                    v-if="isSelected(getUciFromDisplay(r, c))"
-                    class="absolute inset-0.5 rounded-full ring-4 ring-amber-500 bg-amber-400/30 z-10 animate-pulse pointer-events-none"
-                  ></div>
-
-                  <!-- 棋子本身 -->
-                  <div
-                    v-if="getPieceAt(getUciFromDisplay(r, c)) !== '.'"
-                    class="relative z-10 w-[84%] h-[84%] transition-transform group-hover:scale-105"
-                  >
-                    <ChessPiece
-                      :char="getPieceAt(getUciFromDisplay(r, c))"
-                      :is-upgraded="isUpgradedPiece(getPieceAt(getUciFromDisplay(r, c)))"
-                    />
-                  </div>
-
-                  <!-- 可走步標記圓點 (MoveIndicator) -->
-                  <div
-                    v-if="isLegalTarget(getUciFromDisplay(r, c))"
-                    class="absolute z-20 w-4 h-4 rounded-full bg-emerald-500/80 shadow-md shadow-emerald-500/50 pointer-events-none animate-ping"
-                  ></div>
-                  <div
-                    v-if="isLegalTarget(getUciFromDisplay(r, c))"
-                    class="absolute z-20 w-3 h-3 rounded-full bg-emerald-400 shadow-md pointer-events-none ring-2 ring-emerald-200"
-                  ></div>
+                  <ChessPiece
+                    :char="getPieceAt(getUciFromDisplay(r, c))"
+                    :is-upgraded="isUpgradedPiece(getPieceAt(getUciFromDisplay(r, c)))"
+                  />
                 </div>
+
+                <!-- 可走步標記圓點 (MoveIndicator) -->
+                <div
+                  v-if="isLegalTarget(getUciFromDisplay(r, c))"
+                  class="absolute z-20 w-4 h-4 rounded-full bg-emerald-500/80 shadow-md shadow-emerald-500/50 pointer-events-none animate-ping"
+                ></div>
+                <div
+                  v-if="isLegalTarget(getUciFromDisplay(r, c))"
+                  class="absolute z-20 w-3 h-3 rounded-full bg-emerald-400 shadow-md pointer-events-none ring-2 ring-emerald-200"
+                ></div>
               </div>
             </div>
           </div>
+        </div>
 
-          <!-- 底部標籤座標 -->
-          <div class="flex justify-between px-2 pt-2 text-[10px] sm:text-xs text-amber-900/60 font-mono font-bold">
-            <span v-for="c in displayCols" :key="`col-lbl-${c}`">
-              {{ isFlipped ? String.fromCharCode(105 - c) : String.fromCharCode(97 + c) }}
-            </span>
-          </div>
+        <!-- 底部座標軸提示 -->
+        <div class="w-[340px] sm:w-[480px] md:w-[520px] flex justify-between px-6 pt-2.5 text-[11px] sm:text-xs text-amber-900/70 font-mono font-bold">
+          <span v-for="c in displayCols" :key="`col-lbl-${c}`">
+            {{ isFlipped ? String.fromCharCode(105 - c) : String.fromCharCode(97 + c) }}
+          </span>
         </div>
       </div>
 
