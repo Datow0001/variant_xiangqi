@@ -273,25 +273,39 @@ frontend/
 
 ## 7. 開發執行步驟清單 (AI Codegen Checklist)
 
-- [ ] **Task 0: 引擎驗證與前置準備 (Spike Test)**
+- [x] **Task 0: 引擎驗證與前置準備 (Spike Test)**
   - 下載 `fairy-stockfish-largeboard` 二進位檔至 `./engine/`。
   - 透過命令列手動測試載入 `customxiangqi` 並驗證天馬、飛象、迫擊砲、突擊兵走步。
-- [ ] **Task 1: 後端基礎架構與 UCI 行程服務 (Backend)**
+- [x] **Task 1: 後端基礎架構與 UCI 行程服務 (Backend)**
   - 建立 `shared/types.ts` 定義資料模型。
   - 建立 `backend/` 專案結構（`package.json`, `tsconfig.json`）。
   - 實作 `FairyEngine.ts`（以 `child_process.spawn` 串接 Fairy-Stockfish，支援 `getBestMove` 與 `getLegalMoves`）。
-- [ ] **Task 2: 關卡系統、FEN 產生器與 WebSocket 協定 (Backend)**
+- [x] **Task 2: 關卡系統、FEN 產生器與 WebSocket 協定 (Backend)**
   - 實作 `stages.ts`（定義關卡 1~3 的 AI 預算與棋子升級）。
   - 實作 `fen.ts`（將雙方 loadout 寫入標準棋盤 FEN）。
   - 實作 `server.ts`，支援 `START_GAME`、`MAKE_MOVE`、`RESIGN`、`RECONNECT` 與錯誤事件廣播。
-- [ ] **Task 3: 前端專案骨架與棋盤渲染 (Frontend)**
+- [x] **Task 3: 前端專案骨架與棋盤渲染 (Frontend)**
   - 建立 Vite + Vue 3 + TypeScript + Pinia + TailwindCSS 專案。
   - 實作 `ChessBoard.vue`（9x10 網格、楚河漢界、九宮斜線、棋子渲染、紅黑視角翻轉支援）。
-- [ ] **Task 4: 關卡選擇、Loadout 構築與敵方情報 (Frontend)**
+- [x] **Task 4: 關卡選擇、Loadout 構築與敵方情報 (Frontend)**
   - 實作 `StageSelector.vue`（關卡 1、2、3 切換）。
   - 實作 `LoadoutPanel.vue`（10 點預算限制檢核、點選棋子升級）。
   - 實作 `EnemyIntel.vue`（顯示 AI 當前升級棋子資訊）。
-- [ ] **Task 5: 全流程對弈串接、合法步高亮與邊界測試**
+- [x] **Task 5: 全流程對弈串接、合法步高亮與邊界測試**
   - 串接後端 `legalMoves`，點擊棋子時高亮可行走格子。
   - 實作將軍警示 (`isCheck`)、勝負彈窗 (`winner`, `gameOverReason`)。
   - 驗證執黑先手 AI 自動出步、非法走步防禦與斷線重連。
+
+---
+
+## 8. 新棋子走法設計與平衡性測試規範 (Piece Balance Protocol)
+
+為防止未來新增或修改棋子時破壞遊戲平衡（如開局首步秒殺大子、點數嚴重超模），所有變體兵種設計必須嚴格遵循 **[PIECE_BALANCE_TESTING.md](./PIECE_BALANCE_TESTING.md)** 所定義之規範：
+
+1. **三大設計鐵律**：開局首回合禁止攻擊底線大子（Turn-1 Non-aggression）、點數價值對稱、保留反制弱點。
+2. **三大對弈情境**：對稱鏡像組（100場）、等點對照組（雙向換手100場）、純傳統基準組（100場）。
+3. **四大量化警戒紅線**：
+   * 先手勝率不得大於 65%。
+   * 雙向綜合淨勝率偏離度不得大於 70%。
+   * 15 回合內之早夭短局不得大於 5%。
+   * 開局前 5 步出子壟斷率不得大於 70%。
