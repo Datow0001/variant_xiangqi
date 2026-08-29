@@ -1,0 +1,21 @@
+{
+  "name": "variant-xiangqi-backend",
+  "version": "1.0.0",
+  "description": "Variant Xiangqi WebSocket Backend using Fairy-Stockfish Largeboard",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "test:engine": "tsx src/test-engine.ts",
+    "test:client": "tsx src/test-client.ts"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/ws": "^8.5.13",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
