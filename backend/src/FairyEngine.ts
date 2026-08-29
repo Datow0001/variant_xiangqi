@@ -16,7 +16,8 @@ export class FairyEngine {
 
   constructor(
     enginePath?: string,
-    variantPath?: string
+    variantPath?: string,
+    variantName: string = 'customxiangqi'
   ) {
     const resolvedEnginePath =
       enginePath ||
@@ -48,7 +49,7 @@ export class FairyEngine {
       this.rl.on('line', onLine);
       this.send('uci');
       this.send(`setoption name VariantPath value ${resolvedVariantPath}`);
-      this.send('setoption name UCI_Variant value customxiangqi');
+      this.send(`setoption name UCI_Variant value ${variantName}`);
       this.send('isready');
     });
   }
