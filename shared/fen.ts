@@ -95,6 +95,36 @@ export function generateInitialFen(
 }
 
 /**
+ * 依據任意指定的紅方與黑方自訂陣容生成開局 FEN
+ */
+export function generateCustomFen(
+  redLoadouts: LoadoutItem[],
+  blackLoadouts: LoadoutItem[]
+): string {
+  const board: string[][] = INITIAL_RANKS.map((r) => r.split(''));
+
+  for (const item of redLoadouts) {
+    const { col, row } = uciToPos(item.position);
+    const rowIndex = 9 - row;
+    const upgrade = UPGRADES[item.upgradeId];
+    if (upgrade) {
+      board[rowIndex][col] = upgrade.symbolRed;
+    }
+  }
+
+  for (const item of blackLoadouts) {
+    const { col, row } = uciToPos(item.position);
+    const rowIndex = 9 - row;
+    const upgrade = UPGRADES[item.upgradeId];
+    if (upgrade) {
+      board[rowIndex][col] = upgrade.symbolBlack;
+    }
+  }
+
+  return boardToFen(board, 'w');
+}
+
+/**
  * 在 FEN 盤面上執行一步棋並更新回合
  */
 export function applyMoveToFen(fen: string, fromUci: string, toUci: string): string {

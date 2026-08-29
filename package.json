@@ -8,6 +8,7 @@
     "dev:frontend": "npm run dev --prefix frontend",
     "test:engine": "npm run test:engine --prefix backend",
     "test:client": "npm run test:client --prefix backend",
+    "simulate": "npm run simulate --prefix backend",
     "build:frontend": "npm run build --prefix frontend"
   }
 }
