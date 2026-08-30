@@ -19,11 +19,19 @@ export class FairyEngine {
     variantPath?: string,
     variantName: string = 'customxiangqi'
   ) {
+    const isWindows = process.platform === 'win32';
+    const defaultBinary = isWindows
+      ? 'fairy-stockfish-largeboard_x86-64.exe'
+      : 'fairy-stockfish-largeboard_x86-64';
+
     const resolvedEnginePath =
       enginePath ||
-      path.resolve(__dirname, '../../engine/fairy-stockfish-largeboard_x86-64.exe');
+      process.env.ENGINE_PATH ||
+      path.resolve(__dirname, '../../engine', defaultBinary);
     const resolvedVariantPath =
-      variantPath || path.resolve(__dirname, '../../variants.ini');
+      variantPath ||
+      process.env.VARIANT_PATH ||
+      path.resolve(__dirname, '../../variants.ini');
 
     this.process = spawn(resolvedEnginePath);
     this.rl = readline.createInterface({ input: this.process.stdout });

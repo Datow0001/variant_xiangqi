@@ -167,7 +167,13 @@ export const useGameStore = defineStore('game', {
           return;
         }
 
-        const wsUrl = `ws://${window.location.hostname}:8080`;
+        // 自動判定開發環境 (Vite 5173) 與線上環境 (同連接埠 HTTPS/WSS)
+        const isDev = window.location.port === '5173';
+        const isHttps = window.location.protocol === 'https:';
+        const wsProtocol = isHttps ? 'wss:' : 'ws:';
+        const wsUrl = isDev
+          ? `ws://${window.location.hostname}:8080`
+          : `${wsProtocol}//${window.location.host}`;
         const ws = new WebSocket(wsUrl);
 
         ws.onopen = () => {

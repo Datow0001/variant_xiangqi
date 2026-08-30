@@ -1,0 +1,9 @@
+node_modules/
+frontend/dist/
+.git/
+.vscode/
+.idea/
+engine/*.exe
+*.log
+test_*.ini
+cand_*.ini

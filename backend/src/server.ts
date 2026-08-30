@@ -1,9 +1,82 @@
+import * as http from 'http';
+import * as fs from 'fs';
+import * as path from 'path';
+import { fileURLToPath } from 'url';
 import { WebSocketServer, WebSocket } from 'ws';
 import { GameSession } from './session';
 import { ClientAction, ServerEvent } from '../../shared/types';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const PORT = parseInt(process.env.PORT || '8080', 10);
-const wss = new WebSocketServer({ port: PORT });
+const HOST = '0.0.0.0';
+
+// 前端靜態資源打包路徑 (frontend/dist)
+const DIST_PATH = path.resolve(__dirname, '../../frontend/dist');
+
+// 常見 MIME 類型字典
+const MIME_TYPES: Record<string, string> = {
+  '.html': 'text/html; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.js': 'application/javascript; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.svg': 'image/svg+xml',
+  '.ico': 'image/x-icon',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+};
+
+// 1. 建立兼具靜態資源託管的 HTTP 伺服器
+const server = http.createServer((req, res) => {
+  if (!fs.existsSync(DIST_PATH)) {
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    res.end(
+      '<h1>變體象棋伺服器已就緒 (WebSocket 運作中)</h1><p>本地開發模式請造訪 Vite 前端 (http://localhost:5173)</p>'
+    );
+    return;
+  }
+
+  let reqPath = req.url ? req.url.split('?')[0] : '/';
+  if (reqPath === '/') reqPath = '/index.html';
+
+  let filePath = path.join(DIST_PATH, reqPath);
+
+  // 安全防護：避免目錄遍歷攻擊
+  if (!filePath.startsWith(DIST_PATH)) {
+    res.writeHead(403);
+    res.end('Forbidden');
+    return;
+  }
+
+  // SPA 路由支援：若非實體資源檔，退回 index.html
+  if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
+    filePath = path.join(DIST_PATH, 'index.html');
+  }
+
+  const ext = path.extname(filePath).toLowerCase();
+  const contentType = MIME_TYPES[ext] || 'application/octet-stream';
+
+  fs.readFile(filePath, (err, content) => {
+    if (err) {
+      res.writeHead(500);
+      res.end('Internal Server Error');
+    } else {
+      res.writeHead(200, {
+        'Content-Type': contentType,
+        'Cache-Control':
+          ext === '.html' ? 'no-cache' : 'public, max-age=31536000, immutable',
+      });
+      res.end(content);
+    }
+  });
+});
+
+// 2. 將 WebSocket 掛載至同一個 HTTP 伺服器 (單一連接埠合一)
+const wss = new WebSocketServer({ server });
 
 // 儲存當前進行中的 GameSession
 const sessions = new Map<string, { session: GameSession; ws: WebSocket }>();
@@ -32,14 +105,15 @@ wss.on('connection', (ws: WebSocket) => {
 
       switch (msg.action) {
         case 'START_GAME': {
-          console.log(`🎮 玩家請求開局: Stage ${msg.payload.stageId}, 陣營 ${msg.payload.playerColor}`);
+          const mode = msg.payload.gameMode || 'PVE';
+          console.log(`🎮 玩家開局請求: [${mode}]`);
           const session = new GameSession(msg.payload);
           await session.init();
 
           activeGameId = session.gameId;
           sessions.set(session.gameId, { session, ws });
 
-          console.log(`✅ 對局已建立: ${session.gameId}`);
+          console.log(`✅ 對局建立成功: ${session.gameId}`);
           send(ws, {
             event: 'GAME_STATE',
             payload: session.getState(),
@@ -55,7 +129,7 @@ wss.on('connection', (ws: WebSocket) => {
             return;
           }
 
-          console.log(`♟️ 玩家走步: ${from} -> ${to}`);
+          console.log(`♟️ 走步: ${from} -> ${to}`);
           try {
             await entry.session.makePlayerMove(from, to);
             send(ws, {
@@ -114,13 +188,16 @@ wss.on('connection', (ws: WebSocket) => {
     if (activeGameId) {
       const entry = sessions.get(activeGameId);
       if (entry) {
-        // 連線斷開釋放資源
         entry.session.destroy();
         sessions.delete(activeGameId);
-        console.log(`🧹 已清理釋放 GameSession: ${activeGameId}`);
+        console.log(`🧹 已釋放 GameSession: ${activeGameId}`);
       }
     }
   });
 });
 
-console.log(`🚀 變體象棋 WebSocket 伺服器啟動於 ws://localhost:${PORT}`);
+// 3. 啟動監聽 (支援 0.0.0.0 供 Docker / GCP Cloud Run 對外連接)
+server.listen(PORT, HOST, () => {
+  console.log(`🚀 變體象棋全端整合伺服器啟動於 http://${HOST}:${PORT}`);
+  console.log(`📡 WebSocket 服務就緒於 ws://${HOST}:${PORT}`);
+});
