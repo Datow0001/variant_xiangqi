@@ -34,7 +34,7 @@ export const STAGES: Record<1 | 2 | 3, StageDefinition> = {
     name: '巔峰對決',
     budget: 10,
     movetimeMs: 1500,
-    description: 'AI 擁有雙迫擊砲、飛象與雙突擊兵（10 點滿額預算），火力最大化的變體大決戰。',
+    description: 'AI 擁有雙霰彈砲、飛象與雙突擊兵（10 點滿額預算），火力最大化的變體大決戰。',
     defaultBlackLoadouts: [
       { position: 'b7', upgradeId: 'PO_JI_PAO' },
       { position: 'h7', upgradeId: 'PO_JI_PAO' },

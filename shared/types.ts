@@ -31,12 +31,12 @@ export const UPGRADES: Record<UpgradeId, UpgradeInfo> = {
   },
   PO_JI_PAO: {
     id: 'PO_JI_PAO',
-    name: '迫擊砲',
+    name: '霰彈砲',
     originalPieceName: '砲/炮',
     cost: 3,
     symbolRed: 'M',
     symbolBlack: 'm',
-    description: '平時走車，遠程可隔一子跳吃；且解鎖近戰散彈能力（相鄰一格可直接吃子）。',
+    description: '平時走車，遠程隔一子跳吃；敵軍貼身時解鎖近戰直接開火（相鄰一格可直接吃子）。',
   },
   TU_JI_BING: {
     id: 'TU_JI_BING',

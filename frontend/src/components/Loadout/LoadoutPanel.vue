@@ -212,7 +212,7 @@ function applyPreset(presetName: string) {
         @click="applyPreset('ARTILLERY')"
         class="text-xs font-bold px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 transition"
       >
-        💣 迫擊砲突擊流 (10點)
+        💣 霰彈砲突擊流 (10點)
       </button>
       <button
         @click="applyPreset('BALANCED')"

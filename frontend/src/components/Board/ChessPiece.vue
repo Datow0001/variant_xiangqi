@@ -20,7 +20,7 @@ const pieceLabel = computed(() => {
     case 'P': return '兵';
     case 'U': return '天';
     case 'F': return '飛';
-    case 'M': return '迫';
+    case 'M': return '霰';
     case 'S': return '突';
 
     // 黑方
@@ -33,7 +33,7 @@ const pieceLabel = computed(() => {
     case 'p': return '卒';
     case 'u': return '天';
     case 'f': return '飛';
-    case 'm': return '迫';
+    case 'm': return '霰';
     case 's': return '突';
 
     default: return '';
