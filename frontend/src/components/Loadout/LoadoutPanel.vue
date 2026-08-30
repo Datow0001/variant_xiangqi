@@ -6,7 +6,12 @@ import { STAGES } from '@shared/stages';
 
 const store = useGameStore();
 
-const isRed = computed(() => store.playerColor === 'red');
+const isRed = computed(() => {
+  if (store.gameMode === 'PVE') {
+    return store.playerColor === 'red';
+  }
+  return store.activeLoadoutTab === 'red';
+});
 
 // 可升級棋子清單與原始位置
 const upgradeableSlots = computed(() => {
@@ -42,7 +47,12 @@ const upgradeableSlots = computed(() => {
 });
 
 function isSlotUpgraded(pos: string): boolean {
-  return store.playerLoadouts.some((l) => l.position === pos);
+  if (store.gameMode === 'PVE') {
+    return store.playerLoadouts.some((l) => l.position === pos);
+  }
+  return store.activeLoadoutTab === 'red'
+    ? store.redLoadouts.some((l) => l.position === pos)
+    : store.blackLoadouts.some((l) => l.position === pos);
 }
 
 function toggleSlot(slot: { pos: string; upgradeId: UpgradeId }) {
@@ -79,20 +89,17 @@ function applyPreset(presetName: string) {
       };
 
   if (presetName === 'CAVALRY') {
-    // 雙天馬(6) + 雙飛象(4) = 10
     store.toggleUpgrade(p.horseL, 'TIAN_MA');
     store.toggleUpgrade(p.horseR, 'TIAN_MA');
     store.toggleUpgrade(p.eleL, 'FEI_XIANG');
     store.toggleUpgrade(p.eleR, 'FEI_XIANG');
   } else if (presetName === 'ARTILLERY') {
-    // 雙迫擊砲(6) + 1飛象(2) + 2突擊兵(2) = 10
     store.toggleUpgrade(p.canL, 'PO_JI_PAO');
     store.toggleUpgrade(p.canR, 'PO_JI_PAO');
     store.toggleUpgrade(p.eleL, 'FEI_XIANG');
     store.toggleUpgrade(p.pawn2, 'TU_JI_BING');
     store.toggleUpgrade(p.pawn3, 'TU_JI_BING');
   } else if (presetName === 'BALANCED') {
-    // 1天馬(3) + 1迫擊砲(3) + 1飛象(2) + 2突擊兵(2) = 10
     store.toggleUpgrade(p.horseL, 'TIAN_MA');
     store.toggleUpgrade(p.canR, 'PO_JI_PAO');
     store.toggleUpgrade(p.eleL, 'FEI_XIANG');
@@ -104,17 +111,17 @@ function applyPreset(presetName: string) {
 
 <template>
   <div class="max-w-4xl mx-auto py-8 px-4">
-    <!-- 頂部導航與點數統計 -->
-    <div class="flex flex-wrap items-center justify-between gap-4 bg-slate-800/90 border border-slate-700 rounded-2xl p-5 mb-8 shadow-xl backdrop-blur">
+    <!-- 頂部導航與狀態列 -->
+    <div class="flex flex-wrap items-center justify-between gap-4 bg-slate-800/90 border border-slate-700 rounded-2xl p-5 mb-6 shadow-xl backdrop-blur">
       <button
         @click="store.status = 'STAGE_SELECT'"
         class="text-slate-400 hover:text-slate-200 text-sm font-semibold flex items-center gap-1.5 transition-colors"
       >
-        ← 重選關卡 (當前: {{ STAGES[store.stageId].name }})
+        ← 返回模式選擇 ({{ store.gameMode === 'PVE' ? `關卡: ${STAGES[store.stageId].name}` : '雙人對戰' }})
       </button>
 
       <div class="flex items-center gap-6">
-        <div class="text-sm text-slate-300">
+        <div v-if="store.gameMode === 'PVE'" class="text-sm text-slate-300">
           出戰陣營:
           <span :class="isRed ? 'text-red-400 font-bold' : 'text-slate-300 font-bold'">
             {{ isRed ? '紅方 (先手)' : '黑方 (後手)' }}
@@ -122,13 +129,54 @@ function applyPreset(presetName: string) {
         </div>
 
         <div class="flex items-center gap-3 bg-slate-900/80 px-4 py-2 rounded-xl border border-slate-700">
-          <span class="text-xs text-slate-400 font-medium">剩餘點數</span>
+          <span class="text-xs text-slate-400 font-medium">
+            {{ store.gameMode === 'PVP' ? (isRed ? '紅方剩餘點數' : '黑方剩餘點數') : '剩餘點數' }}
+          </span>
           <div class="text-2xl font-black text-amber-400 font-mono">
             {{ store.remainingBudget }}
             <span class="text-xs text-slate-400 font-normal">/ {{ store.maxBudget }}</span>
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- PVP 雙方切換標籤 -->
+    <div v-if="store.gameMode === 'PVP'" class="grid grid-cols-2 gap-4 mb-8">
+      <button
+        @click="store.setActiveLoadoutTab('red')"
+        :class="[
+          'py-3.5 px-6 rounded-2xl font-bold border-2 transition-all flex items-center justify-between',
+          store.activeLoadoutTab === 'red'
+            ? 'bg-red-950/80 border-red-500 text-red-200 shadow-lg shadow-red-950/50 scale-102 ring-2 ring-red-500/20'
+            : 'bg-slate-800/60 border-slate-700 text-slate-400 hover:border-slate-500'
+        ]"
+      >
+        <div class="flex items-center gap-2.5">
+          <span class="w-3.5 h-3.5 rounded-full bg-red-500 shadow"></span>
+          <span class="text-base font-black">🔴 紅方配置</span>
+        </div>
+        <span class="text-xs px-2.5 py-1 rounded-lg bg-slate-900/80 font-mono text-amber-300 border border-slate-700">
+          已用 {{ store.redSpentBudget }}/10 點
+        </span>
+      </button>
+
+      <button
+        @click="store.setActiveLoadoutTab('black')"
+        :class="[
+          'py-3.5 px-6 rounded-2xl font-bold border-2 transition-all flex items-center justify-between',
+          store.activeLoadoutTab === 'black'
+            ? 'bg-neutral-900 border-neutral-400 text-neutral-100 shadow-lg shadow-black/50 scale-102 ring-2 ring-neutral-400/20'
+            : 'bg-slate-800/60 border-slate-700 text-slate-400 hover:border-slate-500'
+        ]"
+      >
+        <div class="flex items-center gap-2.5">
+          <span class="w-3.5 h-3.5 rounded-full bg-neutral-300 shadow"></span>
+          <span class="text-base font-black">⚫ 黑方配置</span>
+        </div>
+        <span class="text-xs px-2.5 py-1 rounded-lg bg-slate-900/80 font-mono text-amber-300 border border-slate-700">
+          已用 {{ store.blackSpentBudget }}/10 點
+        </span>
+      </button>
     </div>
 
     <!-- 特殊棋子說明卡 -->
@@ -184,7 +232,13 @@ function applyPreset(presetName: string) {
     <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-6 mb-8 shadow-xl">
       <h3 class="text-base font-bold text-slate-200 mb-4 flex items-center gap-2">
         <span class="w-2 h-2 rounded-full bg-amber-400"></span>
-        點擊棋子進行升級 / 取消升級
+        <span>
+          正在配置:
+          <strong :class="isRed ? 'text-red-400 font-black' : 'text-neutral-200 font-black'">
+            {{ isRed ? '紅方棋子' : '黑方棋子' }}
+          </strong>
+          （點擊棋子進行升級 / 取消升級）
+        </span>
       </h3>
 
       <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
@@ -221,7 +275,7 @@ function applyPreset(presetName: string) {
         @click="store.startGame()"
         class="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-black text-xl py-4 px-14 rounded-2xl shadow-xl shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all duration-200"
       >
-        開局對弈！ ⚔️
+        {{ store.gameMode === 'PVP' ? '雙方就緒，開局對弈！ ⚔️' : '開局對弈！ ⚔️' }}
       </button>
     </div>
   </div>

@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import {
+  GameMode,
   GameStatePayload,
   LoadoutItem,
   Move,
@@ -13,10 +14,21 @@ export type GameStatus = 'STAGE_SELECT' | 'LOADOUT' | 'PLAYING';
 export const useGameStore = defineStore('game', {
   state: () => ({
     status: 'STAGE_SELECT' as GameStatus,
+    gameMode: 'PVE' as GameMode,
+
+    // PVE 專屬設定
     stageId: 1 as 1 | 2 | 3,
     playerColor: 'red' as 'red' | 'black',
-    maxBudget: 10,
     playerLoadouts: [] as LoadoutItem[],
+
+    // PVP 專屬設定
+    activeLoadoutTab: 'red' as 'red' | 'black',
+    redLoadouts: [] as LoadoutItem[],
+    blackLoadouts: [] as LoadoutItem[],
+    autoFlipOnTurn: false,
+    manualFlipped: false,
+
+    maxBudget: 10,
     selectedSquare: null as string | null, // e.g. "b0"
 
     // WebSocket 與遊戲局況
@@ -28,7 +40,28 @@ export const useGameStore = defineStore('game', {
 
   getters: {
     spentBudget(state): number {
-      return state.playerLoadouts.reduce((sum, item) => {
+      const targetList =
+        state.gameMode === 'PVE'
+          ? state.playerLoadouts
+          : state.activeLoadoutTab === 'red'
+          ? state.redLoadouts
+          : state.blackLoadouts;
+
+      return targetList.reduce((sum, item) => {
+        const upgrade = UPGRADES[item.upgradeId];
+        return sum + (upgrade ? upgrade.cost : 0);
+      }, 0);
+    },
+
+    redSpentBudget(state): number {
+      return state.redLoadouts.reduce((sum, item) => {
+        const upgrade = UPGRADES[item.upgradeId];
+        return sum + (upgrade ? upgrade.cost : 0);
+      }, 0);
+    },
+
+    blackSpentBudget(state): number {
+      return state.blackLoadouts.reduce((sum, item) => {
         const upgrade = UPGRADES[item.upgradeId];
         return sum + (upgrade ? upgrade.cost : 0);
       }, 0);
@@ -39,7 +72,14 @@ export const useGameStore = defineStore('game', {
     },
 
     isFlipped(state): boolean {
-      return state.playerColor === 'black';
+      if (state.gameMode === 'PVE') {
+        return state.playerColor === 'black';
+      }
+      // PVP 模式
+      if (state.autoFlipOnTurn && state.gameState) {
+        return state.gameState.currentTurn === 'black';
+      }
+      return state.manualFlipped;
     },
 
     currentLegalMovesForSelected(state): Move[] {
@@ -52,43 +92,72 @@ export const useGameStore = defineStore('game', {
 
   actions: {
     setStage(stageId: 1 | 2 | 3) {
+      this.gameMode = 'PVE';
       this.stageId = stageId;
+      this.status = 'LOADOUT';
+    },
+
+    setPvpMode() {
+      this.gameMode = 'PVP';
+      this.activeLoadoutTab = 'red';
       this.status = 'LOADOUT';
     },
 
     setPlayerColor(color: 'red' | 'black') {
       this.playerColor = color;
-      this.playerLoadouts = []; // 切換顏色清空原有位置配置
+      this.playerLoadouts = [];
+    },
+
+    setActiveLoadoutTab(tab: 'red' | 'black') {
+      this.activeLoadoutTab = tab;
+    },
+
+    toggleManualFlip() {
+      this.manualFlipped = !this.manualFlipped;
+    },
+
+    toggleAutoFlip() {
+      this.autoFlipOnTurn = !this.autoFlipOnTurn;
     },
 
     toggleUpgrade(position: string, upgradeId: UpgradeId) {
-      const existingIndex = this.playerLoadouts.findIndex((l) => l.position === position);
+      const targetList =
+        this.gameMode === 'PVE'
+          ? this.playerLoadouts
+          : this.activeLoadoutTab === 'red'
+          ? this.redLoadouts
+          : this.blackLoadouts;
+
+      const existingIndex = targetList.findIndex((l) => l.position === position);
       const upgrade = UPGRADES[upgradeId];
       if (!upgrade) return;
 
       if (existingIndex >= 0) {
-        const existing = this.playerLoadouts[existingIndex];
+        const existing = targetList[existingIndex];
         if (existing.upgradeId === upgradeId) {
-          // 取消升級
-          this.playerLoadouts.splice(existingIndex, 1);
+          targetList.splice(existingIndex, 1);
         } else {
-          // 更換升級
           const oldUpgrade = UPGRADES[existing.upgradeId];
           const diffCost = upgrade.cost - (oldUpgrade ? oldUpgrade.cost : 0);
           if (this.remainingBudget >= diffCost) {
-            this.playerLoadouts[existingIndex].upgradeId = upgradeId;
+            targetList[existingIndex].upgradeId = upgradeId;
           }
         }
       } else {
-        // 新增升級
         if (this.remainingBudget >= upgrade.cost) {
-          this.playerLoadouts.push({ position, upgradeId });
+          targetList.push({ position, upgradeId });
         }
       }
     },
 
     resetLoadouts() {
-      this.playerLoadouts = [];
+      if (this.gameMode === 'PVE') {
+        this.playerLoadouts = [];
+      } else if (this.activeLoadoutTab === 'red') {
+        this.redLoadouts = [];
+      } else {
+        this.blackLoadouts = [];
+      }
     },
 
     connectWs(): Promise<void> {
@@ -112,9 +181,13 @@ export const useGameStore = defineStore('game', {
             const data: ServerEvent = JSON.parse(event.data);
             if (data.event === 'GAME_STATE') {
               this.gameState = data.payload;
-              this.isAiThinking =
-                !data.payload.isGameOver &&
-                data.payload.currentTurn !== this.playerColor;
+              if (this.gameMode === 'PVE') {
+                this.isAiThinking =
+                  !data.payload.isGameOver &&
+                  data.payload.currentTurn !== this.playerColor;
+              } else {
+                this.isAiThinking = false;
+              }
               this.selectedSquare = null;
             } else if (data.event === 'ERROR') {
               this.errorMessage = data.payload.message;
@@ -143,17 +216,32 @@ export const useGameStore = defineStore('game', {
         await this.connectWs();
         if (!this.ws) return;
 
-        this.ws.send(
-          JSON.stringify({
-            action: 'START_GAME',
-            payload: {
-              stageId: this.stageId,
-              playerColor: this.playerColor,
-              budget: this.maxBudget,
-              loadouts: this.playerLoadouts,
-            },
-          })
-        );
+        if (this.gameMode === 'PVE') {
+          this.ws.send(
+            JSON.stringify({
+              action: 'START_GAME',
+              payload: {
+                gameMode: 'PVE',
+                stageId: this.stageId,
+                playerColor: this.playerColor,
+                budget: this.maxBudget,
+                loadouts: this.playerLoadouts,
+              },
+            })
+          );
+        } else {
+          this.ws.send(
+            JSON.stringify({
+              action: 'START_GAME',
+              payload: {
+                gameMode: 'PVP',
+                budget: this.maxBudget,
+                redLoadouts: this.redLoadouts,
+                blackLoadouts: this.blackLoadouts,
+              },
+            })
+          );
+        }
         this.status = 'PLAYING';
       } catch (err: any) {
         this.errorMessage = '無法啟動對局：' + err.message;
@@ -161,19 +249,22 @@ export const useGameStore = defineStore('game', {
     },
 
     selectSquare(square: string) {
-      if (!this.gameState || this.gameState.isGameOver || this.isAiThinking) return;
+      if (!this.gameState || this.gameState.isGameOver || this.isAiThinking)
+        return;
 
-      // 如果已經點擊了某個棋子，且當前點擊的格子是其合法目標點，則觸發走步
       if (this.selectedSquare) {
-        const legalMove = this.currentLegalMovesForSelected.find((m) => m.to === square);
+        const legalMove = this.currentLegalMovesForSelected.find(
+          (m) => m.to === square
+        );
         if (legalMove) {
           this.makeMove(this.selectedSquare, square);
           return;
         }
       }
 
-      // 檢查點擊的格子是否有當前玩家可走棋子
-      const hasMovesFromThis = this.gameState.legalMoves.some((m) => m.from === square);
+      const hasMovesFromThis = this.gameState.legalMoves.some(
+        (m) => m.from === square
+      );
       if (hasMovesFromThis) {
         this.selectedSquare = square;
       } else {
@@ -183,7 +274,9 @@ export const useGameStore = defineStore('game', {
 
     makeMove(from: string, to: string) {
       if (!this.ws || !this.gameState) return;
-      this.isAiThinking = true;
+      if (this.gameMode === 'PVE') {
+        this.isAiThinking = true;
+      }
       this.ws.send(
         JSON.stringify({
           action: 'MAKE_MOVE',
@@ -214,6 +307,9 @@ export const useGameStore = defineStore('game', {
       this.gameState = null;
       this.selectedSquare = null;
       this.playerLoadouts = [];
+      this.redLoadouts = [];
+      this.blackLoadouts = [];
+      this.manualFlipped = false;
     },
   },
 });

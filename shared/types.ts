@@ -59,15 +59,20 @@ export interface Move {
   to: string;   // e.g. 'c2'
 }
 
+export type GameMode = 'PVE' | 'PVP';
+
 // -----------------------------------------------------------------------------
 // WebSocket 請求與回應封包
 // -----------------------------------------------------------------------------
 
 export interface StartGamePayload {
-  stageId: 1 | 2 | 3;
-  playerColor: 'red' | 'black';
+  gameMode?: GameMode; // 預設 'PVE'
+  stageId?: 1 | 2 | 3; // PVE 模式必填
+  playerColor?: 'red' | 'black'; // PVE 模式玩家陣營
   budget?: number; // 預設 10
-  loadouts: LoadoutItem[];
+  loadouts?: LoadoutItem[]; // PVE 模式使用
+  redLoadouts?: LoadoutItem[]; // PVP 模式紅方使用
+  blackLoadouts?: LoadoutItem[]; // PVP 模式黑方使用
 }
 
 export interface MovePayload {
@@ -84,7 +89,8 @@ export type ClientAction =
 
 export interface GameStatePayload {
   gameId: string;
-  stageId: number;
+  gameMode: GameMode;
+  stageId?: number;
   fen: string;
   currentTurn: 'red' | 'black';
   lastMove: Move | null;

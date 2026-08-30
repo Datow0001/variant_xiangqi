@@ -96,28 +96,62 @@ function isUpgradedPiece(char: string): boolean {
           ← 返回首頁
         </button>
         <div class="text-sm font-bold text-slate-200">
-          關卡 {{ store.stageId }} 對決
+          {{ store.gameMode === 'PVE' ? `關卡 ${store.stageId} 對決` : '👥 雙人同機切磋' }}
         </div>
       </div>
 
       <!-- 回合與狀態提示 -->
-      <div class="flex items-center gap-4">
-        <div v-if="store.isAiThinking" class="flex items-center gap-2 text-amber-400 font-bold text-sm">
-          <svg class="animate-spin h-4 w-4 text-amber-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
-          </svg>
-          AI 思考中...
-        </div>
-        <div v-else class="flex items-center gap-2 text-sm">
-          <span class="text-slate-400">目前輪到:</span>
-          <span :class="store.gameState?.currentTurn === 'red' ? 'text-red-400 font-bold' : 'text-slate-200 font-bold'">
-            {{ store.gameState?.currentTurn === 'red' ? '紅方行棋' : '黑方行棋' }}
-          </span>
-          <span v-if="store.gameState?.currentTurn === store.playerColor" class="text-xs font-semibold text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-700">
-            您的回合
-          </span>
-        </div>
+      <div class="flex items-center gap-3 sm:gap-4 flex-wrap">
+        <!-- PVE 狀態 -->
+        <template v-if="store.gameMode === 'PVE'">
+          <div v-if="store.isAiThinking" class="flex items-center gap-2 text-amber-400 font-bold text-sm">
+            <svg class="animate-spin h-4 w-4 text-amber-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+            </svg>
+            AI 思考中...
+          </div>
+          <div v-else class="flex items-center gap-2 text-sm">
+            <span class="text-slate-400">目前輪到:</span>
+            <span :class="store.gameState?.currentTurn === 'red' ? 'text-red-400 font-bold' : 'text-slate-200 font-bold'">
+              {{ store.gameState?.currentTurn === 'red' ? '紅方行棋' : '黑方行棋' }}
+            </span>
+            <span v-if="store.gameState?.currentTurn === store.playerColor" class="text-xs font-semibold text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-700">
+              您的回合
+            </span>
+          </div>
+        </template>
+
+        <!-- PVP 狀態與視角工具 -->
+        <template v-else>
+          <div class="flex items-center gap-2 text-sm">
+            <span class="text-slate-400">輪到出步:</span>
+            <span :class="store.gameState?.currentTurn === 'red' ? 'text-red-400 font-black' : 'text-neutral-100 font-black'">
+              {{ store.gameState?.currentTurn === 'red' ? '🔴 紅方行棋' : '⚫ 黑方行棋' }}
+            </span>
+          </div>
+
+          <button
+            @click="store.toggleManualFlip()"
+            class="text-xs font-bold px-2.5 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-amber-300 border border-slate-600 transition flex items-center gap-1"
+            title="手動旋轉 180 度棋盤視角"
+          >
+            🔄 翻轉視角
+          </button>
+
+          <button
+            @click="store.toggleAutoFlip()"
+            :class="[
+              'text-xs font-bold px-2.5 py-1.5 rounded-lg border transition',
+              store.autoFlipOnTurn
+                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                : 'bg-slate-900/60 text-slate-400 border-slate-700 hover:text-slate-200'
+            ]"
+            title="換手時自動旋轉棋盤"
+          >
+            {{ store.autoFlipOnTurn ? '✓ 自動翻轉' : '自動翻轉: 關' }}
+          </button>
+        </template>
 
         <button
           v-if="!store.gameState?.isGameOver"
@@ -374,15 +408,27 @@ function isUpgradedPiece(char: string): boolean {
     >
       <div class="bg-slate-800 border-2 border-amber-500 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl">
         <div class="text-5xl mb-4">
-          {{ store.gameState.winner === store.playerColor ? '🏆' : '💀' }}
+          <template v-if="store.gameMode === 'PVE'">
+            {{ store.gameState.winner === store.playerColor ? '🏆' : '💀' }}
+          </template>
+          <template v-else>
+            {{ store.gameState.winner === 'draw' ? '🤝' : '🏆' }}
+          </template>
         </div>
         <h2 class="text-3xl font-black mb-2 text-slate-100">
-          {{ store.gameState.winner === store.playerColor ? '大獲全勝！' : '遺憾落敗' }}
+          <template v-if="store.gameMode === 'PVE'">
+            {{ store.gameState.winner === store.playerColor ? '大獲全勝！' : '遺憾落敗' }}
+          </template>
+          <template v-else>
+            {{ store.gameState.winner === 'red' ? '🔴 紅方大獲全勝！' : store.gameState.winner === 'black' ? '⚫ 黑方大獲全勝！' : '雙方握手言和！' }}
+          </template>
         </h2>
         <p class="text-slate-400 text-sm mb-6">
           <span v-if="store.gameState.gameOverReason === 'CHECKMATE'">雙方戰至最後，將死勝出！</span>
-          <span v-else-if="store.gameState.gameOverReason === 'STALEMATE'">對方無子可動（困斃判勝）！</span>
-          <span v-else-if="store.gameState.gameOverReason === 'RESIGN'">玩家認輸放棄。</span>
+          <span v-else-if="store.gameState.gameOverReason === 'STALEMATE'">無子可動（困斃判勝）！</span>
+          <span v-else-if="store.gameState.gameOverReason === 'RESIGN'">
+            {{ store.gameMode === 'PVE' ? '玩家認輸放棄。' : (store.gameState.winner === 'red' ? '黑方認輸放棄。' : '紅方認輸放棄。') }}
+          </span>
           <span v-else>對局已結束。</span>
         </p>
 
