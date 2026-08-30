@@ -26,3 +26,13 @@ Thumbs.db
 # Temporary test scripts/files
 test_*.ini
 cand_*.ini
+
+# Environment variables and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.cert
+credentials.json
+service-account*.json
