@@ -4,6 +4,9 @@
   "description": "Variant Xiangqi MVP - Full Stack TypeScript",
   "private": true,
   "scripts": {
+    "smoke:deployment": "npm run smoke:deployment --prefix backend --",
+    "test:deployment": "node --test scripts/tests/*.test.mjs",
+    "release:plan": "node scripts/cloud-run-release.mjs",
     "test": "npm run test --prefix backend",
     "typecheck:backend": "npm run typecheck --prefix backend",
     "dev:backend": "npm run dev --prefix backend",

@@ -18,7 +18,7 @@ export function createGameServer(options: ServerOptions = {}) {
   const manager = new SessionManager(options);
   const dist = path.resolve(options.distPath ?? DIST_PATH);
   const server = http.createServer((req, res) => {
-    if (req.url === '/healthz') { res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ status: 'ok' })); return; }
+    if (req.url === '/healthz') { res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }); res.end(JSON.stringify({ status: 'ok', version: process.env.APP_VERSION ?? 'development' })); return; }
     if (req.method !== 'GET' && req.method !== 'HEAD') { res.writeHead(405); res.end(); return; }
     let pathname: string;
     try { pathname = decodeURIComponent((req.url ?? '/').split('?')[0]); } catch { res.writeHead(400); res.end(); return; }

@@ -4,6 +4,7 @@
   "description": "Variant Xiangqi WebSocket Backend using Fairy-Stockfish Largeboard",
   "type": "module",
   "scripts": {
+    "smoke:deployment": "tsx src/deployment-smoke.ts",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test src/tests/*.test.ts",
     "dev": "tsx watch src/server.ts",
@@ -20,6 +21,7 @@
     "@types/node": "^22.10.2",
     "@types/ws": "^8.5.13",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "yaml": "2.9.1"
   }
 }

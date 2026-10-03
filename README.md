@@ -28,12 +28,16 @@
    * 12 關、3 章的設計表、引擎防守分支驗證、本機最佳成績與進度保存。
 9. **[手機體驗與進度保存 (MOBILE_EXPERIENCE.md)](./MOBILE_EXPERIENCE.md)**：
    * 手機排版、操作確認、schema 2 移轉、配點保存、備份合併與前景恢復，以及實機驗收清單。
+10. **[GCP 部署與發布 (DEPLOYMENT.md)](./DEPLOYMENT.md)**：
+    * 既有服務、Cloud Build 首次切換、無流量預覽、容器驗證、明確版本發布與回復。
+11. **[玩家測試與實機驗收 (PLAYER_TESTING.md)](./PLAYER_TESTING.md)**：
+    * Android／iPhone 驗收表、容量量測、兩輪試玩與問題回報格式。
 
 ---
 
 ## 🛠️ 環境需求與相依性 (Prerequisites)
 
-* **執行環境**：Node.js 18+ (LTS)、npm 9+ 或 pnpm
+* **執行環境**：建議 Node.js 24 LTS 與 npm；部署容器使用 Node.js 24。鎖定安裝請分別執行 `npm ci --prefix backend`、`npm ci --prefix frontend`。
 * **對弈引擎 (Engine)**：**Fairy-Stockfish Largeboard**
   * ⚠️ *重要注意*：中國象棋必須使用 `largeboard` 編譯版本，標準版本不支援 9x10 盤面。
   * 可由 [Fairy-Stockfish 官方 GitHub Releases](https://github.com/fairy-stockfish/Fairy-Stockfish/releases) 下載對應作業系統的 largeboard 版本（如 Windows: `fairy-stockfish-largeboard_x86-64.exe`）。

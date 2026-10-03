@@ -1,61 +1,51 @@
-# ==============================================================================
-# Stage 1: Build Frontend (Vite + Vue 3)
-# ==============================================================================
-FROM node:20-slim AS frontend-builder
-WORKDIR /app
-
-# 複製 package 設定
-COPY package*.json ./
-COPY frontend/package*.json ./frontend/
-COPY backend/package*.json ./backend/
-
-# 安裝依賴
-RUN npm run install:all
-
-# 複製原始碼並建置前端
-COPY shared/ ./shared/
-COPY frontend/ ./frontend/
-RUN npm run build:frontend
-
-# ==============================================================================
-# Stage 2: Production Runner (Google Cloud Run / Linux Container)
-# ==============================================================================
-FROM node:20-slim AS runner
-WORKDIR /app
-
-# 安裝必要系統套件 (curl 下載與 C++ 運行庫)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    ca-certificates \
-    libstdc++6 \
+# Linux amd64 is required by the pinned Fairy-Stockfish executable.
+FROM node:24-bookworm-slim AS engine
+RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates libstdc++6 \
     && rm -rf /var/lib/apt/lists/*
+COPY deployment/engine.sha256 /tmp/engine.sha256
+RUN mkdir -p /app/engine && curl --fail --location --retry 3 \
+    --connect-timeout 20 --max-time 180 \
+    https://github.com/fairy-stockfish/Fairy-Stockfish/releases/download/fairy_sf_14/fairy-stockfish-largeboard_x86-64 \
+    --output /app/engine/fairy-stockfish-largeboard_x86-64 \
+    && cd /app/engine && sha256sum --check /tmp/engine.sha256 \
+    && chmod 755 fairy-stockfish-largeboard_x86-64
 
-# 下載官方 Linux x86-64 版 Fairy-Stockfish Largeboard 象棋引擎
-RUN mkdir -p /app/engine && \
-    curl -L -o /app/engine/fairy-stockfish-largeboard_x86-64 \
-    https://github.com/fairy-stockfish/Fairy-Stockfish/releases/download/fairy_sf_14/fairy-stockfish-largeboard_x86-64 && \
-    chmod +x /app/engine/fairy-stockfish-largeboard_x86-64
-
-# 複製依賴與安裝後端
-COPY package*.json ./
-COPY backend/package*.json ./backend/
-RUN npm install --prefix backend
-
-# 複製設定檔與後端原始碼
-COPY variants.ini ./variants.ini
+FROM engine AS verify
+WORKDIR /app
+COPY package.json ./
+COPY backend/package.json backend/package-lock.json ./backend/
+COPY frontend/package.json frontend/package-lock.json ./frontend/
+RUN npm ci --include=dev --prefix backend && npm ci --include=dev --prefix frontend
 COPY shared/ ./shared/
-COPY backend/ ./backend/
+COPY backend/src/ ./backend/src/
+COPY backend/tsconfig.json ./backend/
+COPY frontend/ ./frontend/
+COPY variants.ini ./
+COPY scripts/ ./scripts/
+COPY cloudbuild.yaml Dockerfile .dockerignore ./
+ENV ENGINE_PATH=/app/engine/fairy-stockfish-largeboard_x86-64 \
+    VARIANT_PATH=/app/variants.ini
+# The default runtime target depends on all Linux tests and the 12-level proof.
+RUN npm run typecheck:backend && npm run build:frontend \
+    && npm test && npm run test:deployment && npm run verify:challenges
 
-# 從第一階段複製建置完成的前端靜態資源
-COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
-
-# 環境變數 (GCP Cloud Run 會自動帶入 PORT，預設為 8080)
-ENV PORT=8080
-ENV HOST=0.0.0.0
-ENV NODE_ENV=production
-ENV ENGINE_PATH=/app/engine/fairy-stockfish-largeboard_x86-64
-ENV VARIANT_PATH=/app/variants.ini
-
+FROM node:24-bookworm-slim AS runtime
+WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates libstdc++6 \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=verify /app/package.json ./
+COPY --from=verify /app/backend/ ./backend/
+COPY --from=verify /app/shared/ ./shared/
+COPY --from=verify /app/variants.ini ./
+COPY --from=verify /app/engine/ ./engine/
+COPY --from=verify /app/frontend/dist/ ./frontend/dist/
+ARG BUILD_COMMIT=development
+ENV PORT=8080 HOST=0.0.0.0 NODE_ENV=production \
+    ENGINE_PATH=/app/engine/fairy-stockfish-largeboard_x86-64 \
+    VARIANT_PATH=/app/variants.ini APP_VERSION=${BUILD_COMMIT} \
+    MAX_ENGINES=4 MAX_SESSIONS=32 ENGINE_THREADS=1 ENGINE_HASH_MB=16
+# Validate the final image, including HTTP assets, WebSockets, AI and reconnect.
+USER node
+RUN npm run smoke:deployment --prefix backend -- --self-host --expect-version "$APP_VERSION"
 EXPOSE 8080
-
 CMD ["npm", "run", "start"]

@@ -36,3 +36,4 @@ cand_*.ini
 *.cert
 credentials.json
 service-account*.json
+.deployment/

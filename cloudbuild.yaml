@@ -1,0 +1,54 @@
+# First change the existing trigger from inline YAML to this repository file.
+# Every build deploys ONLY a tagged preview; promotion is a separate operation.
+steps:
+  - id: ValidateContext
+    name: node:24-bookworm-slim
+    entrypoint: node
+    args: ['scripts/validate-build.mjs', '$PROJECT_ID', '$_AR_PROJECT_ID', '$COMMIT_SHA', '$BUILD_ID']
+  - id: BuildAndVerifyLinux
+    name: gcr.io/cloud-builders/docker
+    args: ['build', '--platform=linux/amd64', '--build-arg', 'BUILD_COMMIT=$COMMIT_SHA', '-t', '$_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$REPO_NAME/$_SERVICE_NAME:$COMMIT_SHA', '-f', 'Dockerfile', '.']
+  - id: Push
+    name: gcr.io/cloud-builders/docker
+    args: ['push', '$_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$REPO_NAME/$_SERVICE_NAME:$COMMIT_SHA']
+  - id: DeployPreview
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: bash
+    args:
+      - scripts/deploy-preview.sh
+      - '$_AR_PROJECT_ID'
+      - '$_DEPLOY_REGION'
+      - '$_SERVICE_NAME'
+      - '$_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$REPO_NAME/$_SERVICE_NAME:$COMMIT_SHA'
+      - '$COMMIT_SHA'
+      - '$BUILD_ID'
+      - '$_TRIGGER_ID'
+      - '$_PREVIEW_MEMORY'
+      - '$_PREVIEW_CONCURRENCY'
+      - '$_PREVIEW_MAX_ENGINES'
+  - id: SmokePreview
+    name: node:24-bookworm-slim
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        npm ci --include=dev --prefix backend
+        node scripts/verify-preview.mjs '$COMMIT_SHA' '$BUILD_ID' '$_SERVICE_NAME'
+images:
+  - '$_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$REPO_NAME/$_SERVICE_NAME:$COMMIT_SHA'
+timeout: 1200s
+options:
+  substitutionOption: ALLOW_LOOSE
+  logging: CLOUD_LOGGING_ONLY
+substitutions:
+  _TRIGGER_ID: e0c2384b-5505-4232-9655-0b878a591a51
+  _SERVICE_NAME: variant-xiangqi
+  _DEPLOY_REGION: asia-east1
+  _AR_HOSTNAME: asia-east1-docker.pkg.dev
+  _AR_REPOSITORY: cloud-run-source-deploy
+  _AR_PROJECT_ID: gen-lang-client-0656791737
+  _PLATFORM: managed
+  _PREVIEW_MEMORY: 1Gi
+  _PREVIEW_CONCURRENCY: '8'
+  _PREVIEW_MAX_ENGINES: '4'
+tags: [gcp-cloud-build-deploy-cloud-run, variant-xiangqi, preview-only]
