@@ -1,20 +1,78 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useGameStore } from '@/stores/gameStore';
-import { fenToBoard } from '@shared/fen';
+import { applyMoveToFen, fenToBoard } from '@shared/fen';
+import type { GameStatePayload, Move } from '@shared/types';
 import { posToUci } from '@shared/coordinates';
 import ChessPiece from './ChessPiece.vue';
 import EnemyIntel from './EnemyIntel.vue';
 import ChallengePanel from '../Challenge/ChallengePanel.vue';
 
 const store = useGameStore();
+const displayedFen = ref(store.gameState?.fen ?? '');
+const displayFlipped = ref(store.isFlipped);
+const movingPiece = ref<{ move: Move; char: string; arrived: boolean } | null>(null);
+const snapshots: GameStatePayload[] = [];
+let displayedGame = store.gameState?.gameId;
+let displayedVersion = store.gameState?.version ?? 0;
+let timer: ReturnType<typeof setTimeout> | undefined;
+let frame = 0;
+let disposed = false;
+const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
 
-const boardMatrix = computed(() => {
-  if (!store.gameState) return [];
-  return fenToBoard(store.gameState.fen);
+function clearAnimation() {
+  clearTimeout(timer); cancelAnimationFrame(frame); movingPiece.value = null;
+}
+function finishSnapshot(state: GameStatePayload) {
+  displayedFen.value = state.fen; displayedVersion = state.version;
+  movingPiece.value = null; displayFlipped.value = store.isFlipped;
+  playNext();
+}
+function playNext() {
+  if (disposed || movingPiece.value) return;
+  const state = snapshots.shift();
+  if (!state) return;
+  const move = state.lastMove;
+  const char = move ? getPieceAt(move.from) : '.';
+  // Animate only a confirmed single move. Recovery snapshots must not invent moves.
+  const singleMove = move && char !== '.' && state.version === displayedVersion + 1 &&
+    applyMoveToFen(displayedFen.value, move.from, move.to).split(' ')[0] === state.fen.split(' ')[0];
+  if (!singleMove || motionPreference.matches) { finishSnapshot(state); return; }
+  movingPiece.value = { move: { ...move }, char, arrived: false };
+  // Let the source position paint before transitioning to the destination.
+  frame = requestAnimationFrame(() => {
+    frame = requestAnimationFrame(() => {
+      if (!movingPiece.value || disposed) return;
+      movingPiece.value.arrived = true;
+      timer = setTimeout(() => finishSnapshot(state), 260);
+    });
+  });
+}
+watch(() => store.gameState, state => {
+  if (!state) { clearAnimation(); snapshots.length = 0; displayedFen.value = ''; displayedGame = undefined; return; }
+  if (state.gameId !== displayedGame) {
+    clearAnimation(); snapshots.length = 0; displayedGame = state.gameId;
+    displayedFen.value = state.fen; displayedVersion = state.version; displayFlipped.value = store.isFlipped; return;
+  }
+  snapshots.push(state); playNext();
+}, { flush: 'sync' });
+watch(() => store.isFlipped, flipped => { if (!movingPiece.value) displayFlipped.value = flipped; });
+onBeforeUnmount(() => { disposed = true; clearAnimation(); snapshots.length = 0; });
+const canInteract = computed(() => store.canMove && !movingPiece.value && !snapshots.length);
+function selectSquare(square: string) { if (canInteract.value) store.selectSquare(square); }
+const movingStyle = computed(() => {
+  if (!movingPiece.value) return {};
+  const square = movingPiece.value.arrived ? movingPiece.value.move.to : movingPiece.value.move.from;
+  const col = square.charCodeAt(0) - 97, row = Number(square.slice(1));
+  return { left: `${getPctX(displayFlipped.value ? 8 - col : col)}%`,
+    top: `${getPctY(displayFlipped.value ? row : 9 - row)}%` };
 });
 
-const isFlipped = computed(() => store.isFlipped);
+const boardMatrix = computed(() => {
+  return displayedFen.value ? fenToBoard(displayedFen.value) : [];
+});
+
+const isFlipped = computed(() => displayFlipped.value);
 
 // 9 欄 (0~8) 與 10 列 (0~9)
 const displayRows = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
@@ -345,13 +403,13 @@ function isUpgradedPiece(char: string): boolean {
               <div
                 v-for="c in displayCols"
                 :key="`cell-${r}-${c}`"
-                @click="store.selectSquare(getUciFromDisplay(r, c))"
+                @click="selectSquare(getUciFromDisplay(r, c))"
                 role="button"
                 :aria-label="`棋格 ${getUciFromDisplay(r, c)}`"
-                :aria-disabled="!store.canMove"
-                :tabindex="store.canMove ? 0 : -1"
-                @keydown.enter.prevent="store.selectSquare(getUciFromDisplay(r, c))"
-                @keydown.space.prevent="store.selectSquare(getUciFromDisplay(r, c))"
+                :aria-disabled="!canInteract"
+                :tabindex="canInteract ? 0 : -1"
+                @keydown.enter.prevent="selectSquare(getUciFromDisplay(r, c))"
+                @keydown.space.prevent="selectSquare(getUciFromDisplay(r, c))"
                 :aria-pressed="isSelected(getUciFromDisplay(r, c))"
                 class="board-square absolute flex items-center justify-center cursor-pointer group"
                 :style="{
@@ -378,7 +436,7 @@ function isUpgradedPiece(char: string): boolean {
                 <div v-if="store.gameState?.challenge?.targetSquare === getUciFromDisplay(r, c)"
                   class="absolute inset-[-3px] rounded-xl ring-4 ring-fuchsia-500 z-20 pointer-events-none" aria-label="指定目標"></div>
                 <div
-                  v-if="getPieceAt(getUciFromDisplay(r, c)) !== '.'"
+                  v-if="getPieceAt(getUciFromDisplay(r, c)) !== '.' && movingPiece?.move.from !== getUciFromDisplay(r, c)"
                   class="relative z-10 w-full h-full transition-transform group-hover:scale-105"
                 >
                   <ChessPiece
@@ -398,6 +456,10 @@ function isUpgradedPiece(char: string): boolean {
                 ></div>
               </div>
             </div>
+          </div>
+          <div v-if="movingPiece" class="moving-piece absolute z-30 pointer-events-none"
+            :style="movingStyle" aria-hidden="true">
+            <ChessPiece :char="movingPiece.char" :is-upgraded="isUpgradedPiece(movingPiece.char)" />
           </div>
         </div>
 
@@ -428,7 +490,7 @@ function isUpgradedPiece(char: string): boolean {
 
     <!-- 勝負結算彈窗 -->
     <div
-      v-if="store.gameState?.isGameOver && store.gameMode !== 'CHALLENGE'"
+      v-if="store.gameState?.isGameOver && store.gameMode !== 'CHALLENGE' && !movingPiece"
       class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto"
     >
       <div class="bg-slate-800 border-2 border-amber-500 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl">
@@ -476,3 +538,15 @@ function isUpgradedPiece(char: string): boolean {
     </div>
   </div>
 </template>
+
+<style scoped>
+.moving-piece {
+  width: 10.5%;
+  height: 9.5%;
+  transform: translate(-50%, -50%);
+  transition: left 240ms ease-in-out, top 240ms ease-in-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .moving-piece { transition: none; }
+}
+</style>
