@@ -23,7 +23,7 @@ export function position(pieces: Record<string, string>, turn: 'w' | 'b' = 'w'):
 }
 export const move = (from: string, to: string): Move => ({ from, to });
 type Spec = Omit<ChallengeDefinition, 'movetimeMs' | 'hintBranches' | 'nextChallengeId' | 'contentVersion' | 'playerColor' | 'referenceLoadouts' | 'allowedUpgrades' | 'budget'> &
-  Partial<Pick<ChallengeDefinition, 'playerColor' | 'referenceLoadouts' | 'allowedUpgrades' | 'budget'>>;
+  Partial<Pick<ChallengeDefinition, 'playerColor' | 'referenceLoadouts' | 'allowedUpgrades' | 'budget' | 'contentVersion'>>;
 export function define(spec: Spec): ChallengeDefinition {
   return { movetimeMs: 300, hintBranches: {}, nextChallengeId: null, contentVersion: 1, playerColor: 'red', referenceLoadouts: [], allowedUpgrades: [], budget: 0, ...spec };
 }

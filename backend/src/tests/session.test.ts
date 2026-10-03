@@ -68,7 +68,7 @@ test('engine faults never count as a player defeat', async () => {
 test('real engine accepts authored residual positions and detects terminal checkmate', async () => {
   const session = new GameSession({ playerColor: 'black' }, { initialFen: '4k4/9/9/9/4p4/9/9/9/9/4K4 b - - 0 1' });
   try { await session.init(); assert.equal(session.currentTurn, 'black'); assert.ok(session.legalMoves.length > 0); } finally { session.destroy(); }
-  const mate = new GameSession({}, { initialFen: '4k4/3RRR3/9/9/9/9/9/9/9/4K4 b - - 0 1' });
+  const mate = new GameSession({}, { initialFen: '4k4/3RRP3/9/9/9/9/9/9/9/4K4 b - - 0 1' });
   try { await mate.init(); assert.equal(mate.isGameOver, true); assert.equal(mate.winner, 'red'); assert.equal(mate.gameOverReason, 'CHECKMATE'); } finally { mate.destroy(); }
 });
 test('real PVE black player receives AI opening move and full budget stage remains valid', async () => {

@@ -34,6 +34,16 @@ export function validateInitialFen(fen: string): void {
     if (width !== 9) throw new Error('FEN requires 9 files');
   }
   const board = fenToBoard(fen);
+  // Upgrades replace original pieces; they do not grant extra material.
+  const inventory = { r: { symbols: 'r', limit: 2 }, n: { symbols: 'nu', limit: 2 },
+    b: { symbols: 'bf', limit: 2 }, a: { symbols: 'a', limit: 2 },
+    c: { symbols: 'cm', limit: 2 }, p: { symbols: 'ps', limit: 5 } };
+  for (const color of ['red', 'black']) {
+    const pieces = board.flat().filter(piece => piece !== '.' && (piece === piece.toUpperCase()) === (color === 'red'));
+    for (const [original, { symbols, limit }] of Object.entries(inventory)) {
+      if (pieces.filter(piece => symbols.includes(piece.toLowerCase())).length > limit) throw new Error(`Piece inventory exceeded: ${color} ${original} limit ${limit}`);
+    }
+  }
   for (const king of ['K', 'k']) {
     const positions = board.flatMap((rank, row) => rank.flatMap((piece, col) => piece === king ? [{ row, col }] : []));
     if (positions.length !== 1) throw new Error('Each side needs exactly one king');

@@ -22,9 +22,9 @@ export const construction = [
     directionHint: '目標與炮在同一欄，缺少的是炮架；思考哪項升級能補足它。', preferredMoves: [move('b2', 'a2')],
     commonMistake: '花滿 3 點升級遠處的馬，卻沒有補上炮架。', completionExplanation: '只花 1 點升級 b2 突擊兵，就能橫移架炮；依卒停留或推進的位置完成第二步捕獲。' }),
   define({ id: 'palace-finale', name: '封宮架炮', order: 12, chapter: 3, difficulty: '綜合', themes: ['突擊兵', '傳統炮', '將殺'],
-    learningPoint: '先準備炮架，再結合其他棋子的封路完成限步將殺。', description: '三匹馬已控制逃路，還需要突擊兵用兩步補上炮架。',
-    initialFen: position({ e9: 'k', e0: 'K', b8: 'N', h8: 'N', g7: 'N', e6: 'C', c7: 'S', a6: 'p' }),
+    learningPoint: '先準備炮架，再結合其他棋子的封路完成限步將殺。', description: '車馬已控制逃路，還需要突擊兵用兩步補上炮架。', contentVersion: 2,
+    initialFen: position({ e9: 'k', e0: 'K', b8: 'N', h8: 'N', f8: 'R', e6: 'C', c7: 'S', a6: 'p' }),
     goal: { type: 'CHECKMATE' }, goalText: '玩家 2 步內將死黑方', maxPlayerMoves: 2,
     directionHint: '先找出黑將的三條逃路由誰控制，再讓突擊兵逐步接近炮的中線。', preferredMoves: [move('c7', 'd7'), move('d7', 'e7')],
-    commonMistake: '把控制逃路的馬移走，或用沒有保護的棋子當炮架。', completionExplanation: '突擊兵 c7 → d7 → e7 建立炮架，炮將軍；b8、h8、g7 的馬分別控制 d9、f9、e8，黑將無法應將。' }),
+    commonMistake: '把控制逃路的車馬移走，或用沒有保護的棋子當炮架。', completionExplanation: '突擊兵 c7 → d7 → e7 建立炮架，炮將軍；b8、h8 的馬控制 d9、f9，f8 的車控制 e8，黑將無法應將。' }),
 ];

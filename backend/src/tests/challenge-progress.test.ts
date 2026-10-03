@@ -82,7 +82,7 @@ test('local progress survives serialization and lower scores never replace the b
 test('content changes and removed levels invalidate incompatible achievements and last-played ids', () => {
   const progress = emptyProgress(); const definition = publicChallenge(CHALLENGES[0]);
   recordAchievement(progress, definition, 3); progress.lastChallengeId = definition.id;
-  const upgraded = { ...definition, contentVersion: 2 };
+  const upgraded = { ...definition, contentVersion: definition.contentVersion + 1 };
   assert.deepEqual(reconcileProgress(progress, [upgraded]).records, {});
   recordAchievement(progress, upgraded, 1); assert.equal(progress.records[definition.id].bestStars, 1);
   assert.equal(reconcileProgress(progress, []).lastChallengeId, null);

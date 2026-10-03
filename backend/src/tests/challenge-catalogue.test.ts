@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CHALLENGES, getChallenge, publicChallenge } from '../challenges';
 import { FairyEngine } from '../FairyEngine';
-import { verifyChallenge, verifyHints } from '../challenges/verify';
+import { configurations, verifyChallenge, verifyHints } from '../challenges/verify';
+import { applyLoadoutsToFen, validateInitialFen } from '../../../shared/fen';
 import { GameSession } from '../session';
 import { normalizeStart } from '../validation';
 
@@ -15,7 +16,10 @@ test('first release has 12 linked levels, 3 chapters, and no private answers in 
     for (const key of ['initialFen', 'hintBranches', 'preferredMoves', 'referenceLoadouts', 'commonMistake', 'completionExplanation']) assert.equal(key in summary, false);
     for (const loadout of definition.referenceLoadouts) assert.ok(definition.allowedUpgrades.some(item => item.position === loadout.position && item.upgradeId === loadout.upgradeId));
     normalizeStart({ gameMode: 'CHALLENGE', challengeId: definition.id, loadouts: definition.referenceLoadouts });
+    for (const loadouts of configurations(definition)) validateInitialFen(applyLoadoutsToFen(definition.initialFen, loadouts, definition.playerColor));
   }
+  assert.equal(getChallenge('rook-mate')!.contentVersion, 2);
+  assert.equal(getChallenge('palace-finale')!.contentVersion, 2);
 });
 
 test('real engine proves all 12 levels and all defensive branches; shipped hints preserve a forced solution', async () => {

@@ -31,7 +31,7 @@ test('protocol requires request ids, valid coordinates and safe versions', () =>
 });
 test('authored FEN validation and move counters', () => {
   validateInitialFen(DEFAULT_XIANGQI_FEN);
-  validateInitialFen('4k4/3RRR3/9/9/9/9/9/9/9/4K4 b - - 0 1');
+  validateInitialFen('4k4/3RPR3/9/9/9/9/9/9/9/4K4 b - - 0 1');
   for (const fen of [
     DEFAULT_XIANGQI_FEN.replace('rnbakabnr', 'rnbakabn'), DEFAULT_XIANGQI_FEN.replace('RNBAKABNR', 'RNBAAABNR'),
     DEFAULT_XIANGQI_FEN.replace(' w ', ' x '), DEFAULT_XIANGQI_FEN + '\nquit',
@@ -44,4 +44,17 @@ test('authored FEN validation and move counters', () => {
   assert.equal(fen.split(' ').slice(1).join(' '), 'w - - 2 2');
   fen = applyMoveToFen(fen, 'a3', 'a4');
   assert.equal(fen.split(' ')[4], '0');
+});
+
+test('authored positions enforce original material limits including upgraded pieces for both colors', () => {
+  for (const color of ['red', 'black']) {
+    for (const symbols of ['rrr', 'nnu', 'uunn', 'bbf', 'ccm', 'aaa', 'ppppps']) {
+      const pieces = color === 'red' ? symbols.toUpperCase() : symbols;
+      const fen = `4k4/9/${pieces}${9 - pieces.length}/9/9/4P4/9/9/9/4K4 w - - 0 1`;
+      assert.throws(() => validateInitialFen(fen), /Piece inventory exceeded/, `${color}: ${symbols}`);
+    }
+  }
+  const upgraded = DEFAULT_XIANGQI_FEN.replace(/n/g, 'u').replace(/N/g, 'U').replace(/b/g, 'f').replace(/B/g, 'F')
+    .replace(/c/g, 'm').replace(/C/g, 'M').replace(/p/g, 's').replace(/P/g, 'S');
+  assert.doesNotThrow(() => validateInitialFen(upgraded));
 });
