@@ -1,7 +1,7 @@
 import { Engine } from '../FairyEngine';
 import { ChallengeDefinition, positionKey } from './model';
 import { LoadoutItem, Move } from '../../../shared/types';
-import { applyLoadoutsToFen, applyMoveToFen } from '../../../shared/fen';
+import { applyLoadoutsToFen, applyMoveToFen, validateInitialFen } from '../../../shared/fen';
 
 interface Proof { hints: Record<string, Move[]>; replies: number; line: Move[] }
 export interface VerificationResult {
@@ -76,6 +76,8 @@ export async function verifyChallenge(definition: ChallengeDefinition, engine: E
   const allHints: Record<string, Move[]> = {};
   for (const loadouts of configurations(definition)) {
     const fen = applyLoadoutsToFen(definition.initialFen, loadouts, definition.playerColor);
+    validateInitialFen(fen);
+    if (fen.split(' ')[1] !== playerTurn) throw new Error(`${definition.id}: starting turn must match player color`);
     if (!(await legal(fen)).length) throw new Error(`${definition.id}: terminal starting position`);
     if (await engine.isCheck(fen.replace(` ${playerTurn} `, ` ${playerTurn === 'w' ? 'b' : 'w'} `))) throw new Error(`${definition.id}: opposing king is already in check at start`);
     let proof: Proof | null = null; let minimum: number | null = null;

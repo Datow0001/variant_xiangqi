@@ -7,6 +7,24 @@ import { persistProgress } from '../../../frontend/src/services/progressStorage'
 
 const catalogue = CHALLENGES.map(publicChallenge);
 
+test('quality revisions discard only changed-level scores and obsolete loadout coordinates', () => {
+  const previous = catalogue.map(def => ({ ...def }));
+  const changed = new Set(['rook-mate', 'elephant-cross', 'screen-team', 'budget-choice', 'which-knight', 'build-a-screen', 'elephant-interlock']);
+  const progress = emptyProgress();
+  for (const def of previous) {
+    if (changed.has(def.id)) def.contentVersion--;
+    recordAchievement(progress, def, 3);
+    rememberSelection(progress, def, [], 100);
+  }
+  progress.preferences['build-a-screen'].loadouts = [{ position: 'b2', upgradeId: 'TU_JI_BING' }];
+  const current = reconcileProgress(progress, catalogue);
+  for (const def of catalogue) {
+    assert.equal(!!current.records[def.id], !changed.has(def.id), def.id);
+    assert.equal(!!current.preferences[def.id], !changed.has(def.id), def.id);
+  }
+  assert.equal(Object.keys(current.records).length, 13);
+});
+
 test('v1 migration keeps achievements; backups exclude session credentials and validate compatible content', () => {
   const definition = catalogue[0];
   const migrated = decodeProgress(JSON.stringify({ schemaVersion: 1, records: { [definition.id]: { completed: true, contentVersion: definition.contentVersion, bestStars: 2 } }, lastChallengeId: definition.id }));

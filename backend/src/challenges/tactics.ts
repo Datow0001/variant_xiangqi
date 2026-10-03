@@ -20,9 +20,9 @@ export const tactics = [
     directionHint: '比較普通兵與突擊兵在己方半場的橫向能力。', preferredMoves: [move('c3', 'd3')],
     commonMistake: '只想向前走，或以為突擊兵能向後退。', completionExplanation: 'c3 尚未過河，升級後仍能橫移至 d3 捕獲敵卒。' }),
   define({ id: 'screen-team', name: '移兵架炮', order: 8, chapter: 2, difficulty: '進階', themes: ['突擊兵', '傳統炮', '配合'],
-    learningPoint: '先用突擊兵建立炮架，再依目標位置完成捕獲。', description: '兩步完成配合；對手推卒時，捕獲位置也要跟著調整。',
-    initialFen: position({ f9: 'k', e0: 'K', a1: 'C', b2: 'S', a6: 'p' }),
+    learningPoint: '先用突擊兵建立炮架，再依目標位置完成捕獲。', description: '兩步完成配合；對手推卒時，捕獲位置也要跟著調整。', contentVersion: 2,
+    initialFen: position({ f9: 'k', e0: 'K', a1: 'C', b3: 'S', a6: 'p' }),
     goal: { type: 'CAPTURE', targetSquare: 'a6' }, goalText: '玩家 2 步內架炮吃掉指定卒', maxPlayerMoves: 2,
-    directionHint: '先把能橫移的棋子放進炮與目標之間，下一回合再看目標是否移動。', preferredMoves: [move('b2', 'a2')],
-    commonMistake: '炮直接前進追卒，卻沒有準備吃子所需的炮架。', completionExplanation: '突擊兵移到 a2 成為炮架；無論卒停在 a6 或推進 a5，炮都能隔子捕獲。' }),
+    directionHint: '先把能橫移的棋子放進炮與目標之間，下一回合再看目標是否移動。', preferredMoves: [move('b3', 'a3')],
+    commonMistake: '炮直接前進追卒，卻沒有準備吃子所需的炮架。', completionExplanation: '突擊兵移到 a3 成為炮架；無論卒停在 a6 或推進 a5，炮都能隔子捕獲。' }),
 ];

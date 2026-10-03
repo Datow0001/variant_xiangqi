@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { normalizeStart, parseAction, validateLoadouts } from '../validation';
 import { applyMoveToFen, DEFAULT_XIANGQI_FEN, validateInitialFen } from '../../../shared/fen';
 import { engineToAppMove, uciToPos } from '../../../shared/coordinates';
+import { position } from '../challenges/model';
 
 test('normalize defaults and validate standard budgets and original pieces', () => {
   assert.deepEqual(normalizeStart({}), { gameMode: 'PVE', budget: 10, stageId: 1, playerColor: 'red', loadouts: [] });
@@ -57,4 +58,37 @@ test('authored positions enforce original material limits including upgraded pie
   const upgraded = DEFAULT_XIANGQI_FEN.replace(/n/g, 'u').replace(/N/g, 'U').replace(/b/g, 'f').replace(/B/g, 'F')
     .replace(/c/g, 'm').replace(/C/g, 'M').replace(/p/g, 's').replace(/P/g, 'S');
   assert.doesNotThrow(() => validateInitialFen(upgraded));
+});
+
+test('authored positions reject unreachable advisors, elephants and soldiers for both colors', () => {
+  for (const black of [false, true]) {
+    const fixture = (piece: string, square: string) => {
+      const pieces = { e0: 'K', f9: 'k', [square]: piece };
+      return position(Object.fromEntries(Object.entries(pieces).map(([s, p]) => black
+        ? [s[0] + (9 - Number(s[1])), p === p.toUpperCase() ? p.toLowerCase() : p.toUpperCase()]
+        : [s, p])), black ? 'b' : 'w');
+    };
+    const invalid = [
+      ['A', 'd1'], ['A', 'e2'], // Inside the palace, but off the advisor's diagonal network.
+      ['B', 'c2'], ['B', 'e4'], ['F', 'i9'], ['F', 'a4'], ['F', 'e8'],
+      ['P', 'b3'], ['P', 'd4'], ['P', 'a2'], ['S', 'b2'],
+    ];
+    for (const [piece, square] of invalid) assert.throws(() => validateInitialFen(fixture(piece, square)), /Unreachable/, `${black}: ${piece} ${square}`);
+    const valid = [
+      ['A', 'd0'], ['A', 'e1'], ['A', 'f2'], ['B', 'a2'], ['B', 'g4'],
+      ['F', 'a6'], ['F', 'e6'], ['F', 'c8'], ['F', 'g8'],
+      ['P', 'c3'], ['P', 'g4'], ['P', 'b5'], ['P', 'i9'],
+      ['S', 'b3'], ['S', 'h4'], ['S', 'd8'],
+    ];
+    for (const [piece, square] of valid) assert.doesNotThrow(() => validateInitialFen(fixture(piece, square)), `${black}: ${piece} ${square}`);
+  }
+});
+
+test('pre-river soldiers need distinct origins; upgraded soldiers may share a file', () => {
+  for (const black of [false, true]) {
+    const pieces: Record<string, string> = black ? { e0: 'K', f9: 'k', c6: 'p', c5: 'p' } : { e0: 'K', f9: 'k', c3: 'P', c4: 'P' };
+    assert.throws(() => validateInitialFen(position(pieces)), /share one starting file/);
+    if (black) pieces.c5 = 's'; else pieces.c4 = 'S';
+    assert.doesNotThrow(() => validateInitialFen(position(pieces)));
+  }
 });

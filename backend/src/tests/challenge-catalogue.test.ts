@@ -18,7 +18,7 @@ test('catalogue has 20 linked levels, 5 chapters, and no private answers in summ
     normalizeStart({ gameMode: 'CHALLENGE', challengeId: definition.id, loadouts: definition.referenceLoadouts });
     for (const loadouts of configurations(definition)) validateInitialFen(applyLoadoutsToFen(definition.initialFen, loadouts, definition.playerColor));
   }
-  assert.equal(getChallenge('rook-mate')!.contentVersion, 2);
+  assert.equal(getChallenge('rook-mate')!.contentVersion, 3);
   assert.equal(getChallenge('palace-finale')!.contentVersion, 2);
 });
 

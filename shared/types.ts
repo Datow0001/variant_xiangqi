@@ -27,7 +27,7 @@ export const UPGRADES: Record<UpgradeId, UpgradeInfo> = {
     cost: 2,
     symbolRed: 'F',
     symbolBlack: 'f',
-    description: '打破楚河漢界限制，田字跳躍可直接渡河深入敵陣進攻。',
+    description: '斜走兩格、可以過河；仍受象眼阻擋，不能越過中間的棋子。',
   },
   PO_JI_PAO: {
     id: 'PO_JI_PAO',
@@ -36,7 +36,7 @@ export const UPGRADES: Record<UpgradeId, UpgradeInfo> = {
     cost: 3,
     symbolRed: 'M',
     symbolBlack: 'm',
-    description: '平時走車，遠程隔一子跳吃；敵軍貼身時解鎖近戰直接開火（相鄰一格可直接吃子）。',
+    description: '沿直線移動，遠程吃子須隔恰好一子；上下左右相鄰一格可直接吃子。',
   },
   TU_JI_BING: {
     id: 'TU_JI_BING',
@@ -45,7 +45,7 @@ export const UPGRADES: Record<UpgradeId, UpgradeInfo> = {
     cost: 1,
     symbolRed: 'S',
     symbolBlack: 's',
-    description: '未過河前即解鎖左右平移能力，大幅提升開局推進彈性。',
+    description: '每次向前或左右走一格、吃子同走法；未過河也可橫移，不能後退。',
   },
 };
 

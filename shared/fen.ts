@@ -19,7 +19,9 @@ const INITIAL_RANKS: string[] = [
   'RNBAKABNR', // Rank 0 (紅底)
 ];
 
-/** Validate authored starting positions, not proof of historical reachability. */
+/** Validate material and empty-board reachability of authored positions.
+ * This is not move generation or proof of a complete legal game history.
+ */
 export function validateInitialFen(fen: string): void {
   if (typeof fen !== 'string' || fen.length > 300 || /[\r\n]/.test(fen)) throw new Error('Invalid FEN');
   const parts = fen.trim().split(/\s+/);
@@ -54,6 +56,25 @@ export function validateInitialFen(fen: string): void {
     const p = board[row][col];
     if ((p === 'A' || p === 'a') && (col < 3 || col > 5 || (p === 'A' ? row < 7 : row > 2))) throw new Error('Advisor outside palace');
     if ((p === 'B' && row < 5) || (p === 'b' && row > 4)) throw new Error('Traditional elephant crossed river');
+    const kind = p.toLowerCase();
+    // Normalize both armies to their own bottom rank; upgrades never move a piece.
+    const rank = p === p.toUpperCase() ? 9 - row : row;
+    const square = `${String.fromCharCode(97 + col)}${9 - row}`;
+    if (kind === 'a' && !((rank === 1 && col === 4) || ([0, 2].includes(rank) && [3, 5].includes(col)))) {
+      throw new Error(`Unreachable advisor square: ${p} ${square}`);
+    }
+    // Both starting elephants share this component of the two-square diagonal graph.
+    if (['b', 'f'].includes(kind) && (rank % 2 !== 0 || col % 2 !== 0 || (rank + col) % 4 !== 2)) {
+      throw new Error(`Unreachable elephant square: ${p} ${square}`);
+    }
+    if (['p', 's'].includes(kind) && (rank < 3 || (kind === 'p' && rank < 5 && col % 2 !== 0))) {
+      throw new Error(`Unreachable soldier square: ${p} ${square}`);
+    }
+  }
+  // Two ordinary pre-river soldiers on one file cannot share the same original soldier.
+  for (const piece of ['P', 'p']) for (let col = 0; col < 9; col += 2) {
+    const rows = piece === 'P' ? [5, 6] : [3, 4];
+    if (rows.every(row => board[row][col] === piece)) throw new Error(`Soldiers share one starting file: ${piece} ${String.fromCharCode(97 + col)}`);
   }
   const redRow = board.findIndex(rank => rank.includes('K'));
   const blackRow = board.findIndex(rank => rank.includes('k'));

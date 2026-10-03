@@ -46,11 +46,11 @@
 [customxiangqi:xiangqi]
 # 棋子代號映射：
 # u/U: 天馬 (Knight, 無蹩馬腳限制)
-# f/F: 飛象 (Elephant, 田字走法且可自由過河)
+# f/F: 飛象 (Elephant, 斜走兩格、可過河但仍受象眼阻擋)
 # m/M: 霰彈砲 (Shotgun Cannon, 平時走車，遠程隔子跳吃，解鎖相鄰 1 格近戰直接吃)
 # s/S: 突擊兵 (Assault Soldier, 前進與左右橫移)
 customPiece1 = u:N
-customPiece2 = f:A
+customPiece2 = f:nA
 customPiece3 = m:mRcpRcW
 customPiece4 = s:fsW
 
@@ -63,7 +63,7 @@ pieceValue = u:550, f:350, m:600, s:250, r:900, n:400, b:250, a:250, k:10000, c:
 | 棋子 ID (`upgradeId`) | 原始棋子 | 升級型態 | Cost | FEN 代號（紅/黑） | 特殊能力說明 |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `TIAN_MA` | 馬 (N) | 天馬 | 3 | `U` / `u` | 具備西洋棋騎士走法，移動不被拐馬腳（蹩腳）。 |
-| `FEI_XIANG` | 相/象 (B) | 飛象 | 2 | `F` / `f` | 走田字格，打破楚河漢界限制，可直接渡河進攻。 |
+| `FEI_XIANG` | 相/象 (B) | 飛象 | 2 | `F` / `f` | 斜走兩格、可過河，但仍受象眼阻擋。 |
 | `PO_JI_PAO` | 砲 (C) | 霰彈砲 | 3 | `M` / `m` | 平時走車，遠程隔一子跳吃；敵軍貼身時解鎖近戰直接開火（相鄰一格可直接吃子）。 |
 | `TU_JI_BING` | 兵/卒 (P) | 突擊兵 | 1 | `S` / `s` | 過河前即解鎖左右平移能力，大幅提升開局推進彈性。 |
 
