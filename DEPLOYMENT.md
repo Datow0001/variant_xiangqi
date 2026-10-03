@@ -40,7 +40,9 @@ Dockerfile 使用 Node 24、Debian bookworm、Linux amd64；前後端都用 `npm
 
 預設 Docker runtime target 必須先完成 Linux 型別檢查、前端建置、完整測試及全部 12 關策略驗證。最終 runtime 以非 root 的 node 使用者執行，建置時再啟動短暫伺服器，檢查健康版本、前端 JS、WebSocket、提示、重連、將殺、天馬升級及 PVE AI。任一步失敗便無法完成映像與部署。Node 基底以 LTS／作業系統標籤指定，尚未鎖定映像 digest；實際建置映像 digest 應隨發布記錄保留。
 
-正式對外 `/healthz` 回傳 status 與 APP_VERSION，沒有憑證或環境設定；它只證明 HTTP 程序存活。引擎功能必須由驗收腳本確認。預覽驗收會使用少量真實引擎，結束後送出 LEAVE_GAME；若中途失聯，資源由既有逾時機制清理。
+正式對外 `/api/health` 回傳 status 與 APP_VERSION，沒有憑證或環境設定；它只證明 HTTP 程序存活。引擎功能必須由驗收腳本確認。預覽驗收會使用少量真實引擎，結束後送出 LEAVE_GAME；若中途失聯，資源由既有逾時機制清理。
+
+健康檢查避免使用 `/healthz`：Cloud Run 保留部分以 `z` 結尾的路徑，可能在請求進入容器之前回傳 Google 前端的 404。首次建構 `1bbc144f-6840-4031-a60f-474fa117c028` 已通過 Linux 建構與預覽部署，但因此在外部健康檢查失敗；改用 `/api/health` 後必須重新完成外部驗收。參考 [Cloud Run 保留路徑](https://docs.cloud.google.com/run/docs/known-issues#reserved-url-paths)。
 
 ## 測試版資源與限制
 

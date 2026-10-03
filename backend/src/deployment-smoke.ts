@@ -69,18 +69,20 @@ export async function smokeDeployment(base: string, expectedVersion?: string) {
   assert.ok(!url.username && !url.password && !url.search && !url.hash && url.pathname === '/', 'Use a base URL without credentials, path, query or fragment');
   let healthResponse: Response | undefined;
   for (let attempt = 0; attempt < 3; attempt++) {
-    try { healthResponse = await fetch(new URL('/healthz', url), { signal: AbortSignal.timeout(15000) }); break; }
+    try { healthResponse = await fetch(new URL('/api/health', url), { signal: AbortSignal.timeout(15000) }); break; }
     catch (error) { if (attempt === 2) throw error; await new Promise(resolve => setTimeout(resolve, 1000)); }
   }
   assert.ok(healthResponse);
-  assert.equal(healthResponse.status, 200); const health = await healthResponse.json() as { status: string; version: string };
+  assert.equal(healthResponse.status, 200, `Health endpoint /api/health returned HTTP ${healthResponse.status}`);
+  assert.match(healthResponse.headers.get('content-type') ?? '', /application\/json/, 'Health endpoint must return JSON');
+  const health = await healthResponse.json() as { status: string; version: string };
   assert.equal(health.status, 'ok'); if (expectedVersion) assert.equal(health.version, expectedVersion, 'Wrong deployed commit');
   const indexResponse = await fetch(url, { signal: AbortSignal.timeout(15000) });
-  assert.equal(indexResponse.status, 200); const index = await indexResponse.text();
+  assert.equal(indexResponse.status, 200, `Frontend / returned HTTP ${indexResponse.status}`); const index = await indexResponse.text();
   assert.match(index, /id="app"/); const asset = index.match(/src="(\/assets\/[^"]+\.js)"/);
   assert.ok(asset, 'Built frontend asset missing');
   const assetResponse = await fetch(new URL(asset[1], url), { signal: AbortSignal.timeout(15000) });
-  assert.equal(assetResponse.status, 200); assert.match(assetResponse.headers.get('content-type') ?? '', /javascript/);
+  assert.equal(assetResponse.status, 200, `Frontend asset ${asset[1]} returned HTTP ${assetResponse.status}`); assert.match(assetResponse.headers.get('content-type') ?? '', /javascript/);
   // Consume the response so the test does not leave an open HTTP stream.
   await assetResponse.arrayBuffer();
   url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';

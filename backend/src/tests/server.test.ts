@@ -89,7 +89,7 @@ test('real production server handles PVE, versioned moves and resignation', asyn
     error(await client.request('MAKE_MOVE', { gameId: game.state.gameId, from: 'a0', to: 'a1', expectedVersion: 0 }), 'STALE_STATE');
     const final = state(await client.request('RESIGN', { gameId: game.state.gameId }));
     assert.equal(final.winner, 'black'); assert.equal(final.status, 'FINISHED'); assert.equal(h.app.manager.engineCount, 0);
-    assert.equal((await fetch(`http://127.0.0.1:${h.port}/healthz`)).status, 200);
+    assert.equal((await fetch(`http://127.0.0.1:${h.port}/api/health`)).status, 200);
   } finally { await h.close(); }
 });
 test('PVP duplicate request executes once, request id conflicts and invalid move are explicit', async () => {
