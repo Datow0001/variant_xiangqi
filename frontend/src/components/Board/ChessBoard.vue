@@ -5,6 +5,7 @@ import { fenToBoard } from '@shared/fen';
 import { posToUci } from '@shared/coordinates';
 import ChessPiece from './ChessPiece.vue';
 import EnemyIntel from './EnemyIntel.vue';
+import ChallengePanel from '../Challenge/ChallengePanel.vue';
 
 const store = useGameStore();
 
@@ -85,25 +86,30 @@ function isUpgradedPiece(char: string): boolean {
 </script>
 
 <template>
-  <div class="max-w-5xl mx-auto py-6 px-4">
+  <div class="w-full max-w-5xl mx-auto py-4 px-3 sm:px-4">
+    <div v-if="store.gameState?.status === 'FAULTED'" role="alert" class="mb-4 rounded-xl bg-red-950 p-4 text-red-200">
+      對局已中斷，既有最佳成績仍保留。
+      <button v-if="store.gameMode === 'CHALLENGE'" @click="store.showChallenges(store.selectedChallengeId)" class="underline ml-2">返回本關重新挑戰</button>
+    </div>
     <!-- 頂部資訊列 -->
     <div class="flex flex-wrap items-center justify-between gap-4 bg-slate-800/80 border border-slate-700 rounded-2xl p-4 mb-6 shadow-lg">
       <div class="flex items-center gap-3">
         <button
-          @click="store.returnToStageSelect()"
+          @click="store.requestConfirmation('LEAVE')"
           class="text-xs font-bold px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 transition"
         >
           ← 返回首頁
         </button>
         <div class="text-sm font-bold text-slate-200">
-          {{ store.gameMode === 'PVE' ? `關卡 ${store.stageId} 對決` : '👥 雙人同機切磋' }}
+          {{ store.gameMode === 'CHALLENGE' ? '⚡ 短局挑戰' : store.gameMode === 'PVE' ? `關卡 ${store.stageId} 對決` : '👥 雙人同機切磋' }}
         </div>
       </div>
 
       <!-- 回合與狀態提示 -->
       <div class="flex items-center gap-3 sm:gap-4 flex-wrap">
         <!-- PVE 狀態 -->
-        <template v-if="store.gameMode === 'PVE'">
+        <div v-if="store.gameState?.status === 'FINISHED'" class="text-sm text-slate-400">本局已結束</div>
+        <template v-else-if="store.gameMode !== 'PVP'">
           <div v-if="store.isAiThinking" class="flex items-center gap-2 text-amber-400 font-bold text-sm">
             <svg class="animate-spin h-4 w-4 text-amber-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -155,18 +161,26 @@ function isUpgradedPiece(char: string): boolean {
 
         <button
           v-if="!store.gameState?.isGameOver"
-          @click="store.resign()"
+          :disabled="store.connectionStatus !== 'CONNECTED' || store.gameState?.status === 'FAULTED' || store.isRecovering || store.isResignPending"
+          @click="store.requestConfirmation('RESIGN')"
           class="text-xs font-bold px-3 py-1.5 rounded-lg bg-red-950/60 hover:bg-red-900/80 text-red-300 border border-red-800 transition"
         >
           認輸投降
         </button>
       </div>
     </div>
+    <div v-if="store.gameState?.challenge" class="lg:hidden mb-5 rounded-xl bg-slate-800 border border-slate-700 p-3 flex gap-3 items-start" aria-label="目前挑戰目標">
+      <div class="min-w-0 flex-1"><p class="text-sm font-bold text-amber-300">{{ store.gameState.challenge.definition.name }}</p>
+        <p class="text-xs text-slate-300 mt-1">{{ store.gameState.challenge.definition.goalText }}</p>
+        <p v-if="store.gameState.challenge.targetSquare" class="text-xs text-fuchsia-300 mt-1">紫框目標 {{ store.gameState.challenge.targetSquare }}</p></div>
+      <span class="shrink-0 font-bold text-emerald-300 text-sm">剩 {{ store.gameState.challenge.remainingMoves }} 步</span>
+    </div>
+    <p v-if="!store.resumeStorageAvailable" class="text-xs text-amber-300 mb-3">瀏覽器無法保存對局恢復資訊；請保持此頁開啟。最佳成績保存狀態可在選關頁查看。</p>
 
     <!-- 主區塊：棋盤與側欄情報 -->
-    <div class="grid lg:grid-cols-[1fr_320px] gap-8 items-start">
+    <div class="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-5 items-start">
       <!-- 傳統標準象棋棋盤 -->
-      <div class="relative flex flex-col items-center">
+      <div class="relative min-w-0 flex flex-col items-center">
         <!-- 被將軍警戒橫幅 -->
         <div
           v-if="store.gameState?.isCheck && !store.gameState?.isGameOver"
@@ -176,7 +190,7 @@ function isUpgradedPiece(char: string): boolean {
         </div>
 
         <!-- 棋盤容器 -->
-        <div class="relative w-[340px] sm:w-[480px] md:w-[520px] aspect-[560/620] bg-amber-100/95 rounded-2xl shadow-2xl p-2 select-none border-2 border-amber-950/70">
+        <div class="board-size relative aspect-[560/620] bg-amber-100/95 rounded-2xl shadow-2xl p-2 select-none border-2 border-amber-950/70">
           <!-- 1. 底層標準 SVG 盤線繪製 (精確 9x10 幾何) -->
           <svg
             viewBox="0 0 560 620"
@@ -332,7 +346,14 @@ function isUpgradedPiece(char: string): boolean {
                 v-for="c in displayCols"
                 :key="`cell-${r}-${c}`"
                 @click="store.selectSquare(getUciFromDisplay(r, c))"
-                class="absolute flex items-center justify-center cursor-pointer group"
+                role="button"
+                :aria-label="`棋格 ${getUciFromDisplay(r, c)}`"
+                :aria-disabled="!store.canMove"
+                :tabindex="store.canMove ? 0 : -1"
+                @keydown.enter.prevent="store.selectSquare(getUciFromDisplay(r, c))"
+                @keydown.space.prevent="store.selectSquare(getUciFromDisplay(r, c))"
+                :aria-pressed="isSelected(getUciFromDisplay(r, c))"
+                class="board-square absolute flex items-center justify-center cursor-pointer group"
                 :style="{
                   left: `${getPctX(c)}%`,
                   top: `${getPctY(r)}%`,
@@ -344,16 +365,18 @@ function isUpgradedPiece(char: string): boolean {
                 <!-- 最後一步背景光暈 -->
                 <div
                   v-if="isLastMove(getUciFromDisplay(r, c))"
-                  class="absolute inset-0 rounded-full bg-amber-400/35 animate-pulse"
+                  class="absolute inset-0 rounded-md bg-amber-400/25 border-2 border-amber-700/40"
                 ></div>
 
                 <!-- 被選中棋子發光光環 -->
                 <div
                   v-if="isSelected(getUciFromDisplay(r, c))"
-                  class="absolute inset-[-4px] rounded-full ring-4 ring-amber-500 bg-amber-400/30 z-10 animate-pulse pointer-events-none"
+                  class="absolute inset-[-2px] rounded-full ring-4 ring-sky-500 bg-sky-400/20 z-10 pointer-events-none"
                 ></div>
 
                 <!-- 棋子本體 -->
+                <div v-if="store.gameState?.challenge?.targetSquare === getUciFromDisplay(r, c)"
+                  class="absolute inset-[-3px] rounded-xl ring-4 ring-fuchsia-500 z-20 pointer-events-none" aria-label="指定目標"></div>
                 <div
                   v-if="getPieceAt(getUciFromDisplay(r, c)) !== '.'"
                   class="relative z-10 w-full h-full transition-transform group-hover:scale-105"
@@ -367,7 +390,7 @@ function isUpgradedPiece(char: string): boolean {
                 <!-- 可走步標記圓點 (MoveIndicator) -->
                 <div
                   v-if="isLegalTarget(getUciFromDisplay(r, c))"
-                  class="absolute z-20 w-4 h-4 rounded-full bg-emerald-500/80 shadow-md shadow-emerald-500/50 pointer-events-none animate-ping"
+                  class="absolute z-20 w-4 h-4 rounded-full bg-emerald-500/50 pointer-events-none"
                 ></div>
                 <div
                   v-if="isLegalTarget(getUciFromDisplay(r, c))"
@@ -379,32 +402,34 @@ function isUpgradedPiece(char: string): boolean {
         </div>
 
         <!-- 底部座標軸提示 -->
-        <div class="w-[340px] sm:w-[480px] md:w-[520px] flex justify-between px-6 pt-2.5 text-[11px] sm:text-xs text-amber-900/70 font-mono font-bold">
+        <div class="board-size flex justify-between px-6 pt-2.5 text-[11px] sm:text-xs text-slate-400 font-mono font-bold">
           <span v-for="c in displayCols" :key="`col-lbl-${c}`">
             {{ isFlipped ? String.fromCharCode(105 - c) : String.fromCharCode(97 + c) }}
           </span>
         </div>
+        <p class="text-xs text-slate-400 mt-2 text-center">點棋子，再點綠色落點；再次點同一棋子可取消。<br />藍圈：選取 · 紫框：目標 · 金框：最後一步</p>
       </div>
 
       <!-- 側邊：敵方情報與歷史走步 -->
       <div class="space-y-6">
-        <EnemyIntel />
+        <ChallengePanel v-if="store.gameMode === 'CHALLENGE'" />
+        <EnemyIntel v-else />
 
-        <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-4 shadow-lg">
-          <h3 class="font-bold text-sm text-slate-300 mb-2">對局狀態</h3>
+        <details class="bg-slate-800/80 border border-slate-700 rounded-2xl p-4 shadow-lg">
+          <summary class="font-bold text-sm text-slate-300 cursor-pointer py-2">對局詳情</summary>
           <div class="text-xs text-slate-400 space-y-1.5 font-mono">
             <div>最後一步: {{ store.gameState?.lastMove ? `${store.gameState.lastMove.from} → ${store.gameState.lastMove.to}` : '尚未出步' }}</div>
             <div>當前合法步數: {{ store.gameState?.legalMoves.length || 0 }} 步</div>
             <div>將軍警示: {{ store.gameState?.isCheck ? '已將軍' : '正常' }}</div>
           </div>
-        </div>
+        </details>
       </div>
     </div>
 
     <!-- 勝負結算彈窗 -->
     <div
-      v-if="store.gameState?.isGameOver"
-      class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in"
+      v-if="store.gameState?.isGameOver && store.gameMode !== 'CHALLENGE'"
+      class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto"
     >
       <div class="bg-slate-800 border-2 border-amber-500 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl">
         <div class="text-5xl mb-4">
@@ -435,6 +460,7 @@ function isUpgradedPiece(char: string): boolean {
         <div class="space-y-3">
           <button
             @click="store.startGame()"
+            :disabled="store.isStarting"
             class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-3 px-6 rounded-xl shadow-lg transition"
           >
             再戰一局 ⚔️

@@ -1,203 +1,134 @@
-import * as http from 'http';
-import * as fs from 'fs';
-import * as path from 'path';
-import { fileURLToPath } from 'url';
+import * as http from 'node:http';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { WebSocketServer, WebSocket } from 'ws';
-import { GameSession } from './session';
-import { ClientAction, ServerEvent } from '../../shared/types';
+import { ServerEvent } from '../../shared/types';
+import { ManagerOptions, SessionManager, send, ConnectionContext } from './SessionManager';
+import { parseAction } from './validation';
+import { GameError, asGameError } from './errors';
+import { FairyEngine } from './FairyEngine';
+import { CHALLENGES, publicChallenge } from './challenges';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const DIST_PATH = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../frontend/dist');
+const MIME: Record<string, string> = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'application/javascript', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon', '.woff2': 'font/woff2' };
+export interface ServerOptions extends ManagerOptions { heartbeatMs?: number; distPath?: string }
 
-const PORT = parseInt(process.env.PORT || '8080', 10);
-const HOST = '0.0.0.0';
-
-// 前端靜態資源打包路徑 (frontend/dist)
-const DIST_PATH = path.resolve(__dirname, '../../frontend/dist');
-
-// 常見 MIME 類型字典
-const MIME_TYPES: Record<string, string> = {
-  '.html': 'text/html; charset=utf-8',
-  '.css': 'text/css; charset=utf-8',
-  '.js': 'application/javascript; charset=utf-8',
-  '.json': 'application/json; charset=utf-8',
-  '.png': 'image/png',
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.svg': 'image/svg+xml',
-  '.ico': 'image/x-icon',
-  '.woff': 'font/woff',
-  '.woff2': 'font/woff2',
-};
-
-// 1. 建立兼具靜態資源託管的 HTTP 伺服器
-const server = http.createServer((req, res) => {
-  if (!fs.existsSync(DIST_PATH)) {
-    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-    res.end(
-      '<h1>變體象棋伺服器已就緒 (WebSocket 運作中)</h1><p>本地開發模式請造訪 Vite 前端 (http://localhost:5173)</p>'
-    );
-    return;
-  }
-
-  let reqPath = req.url ? req.url.split('?')[0] : '/';
-  if (reqPath === '/') reqPath = '/index.html';
-
-  let filePath = path.join(DIST_PATH, reqPath);
-
-  // 安全防護：避免目錄遍歷攻擊
-  if (!filePath.startsWith(DIST_PATH)) {
-    res.writeHead(403);
-    res.end('Forbidden');
-    return;
-  }
-
-  // SPA 路由支援：若非實體資源檔，退回 index.html
-  if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
-    filePath = path.join(DIST_PATH, 'index.html');
-  }
-
-  const ext = path.extname(filePath).toLowerCase();
-  const contentType = MIME_TYPES[ext] || 'application/octet-stream';
-
-  fs.readFile(filePath, (err, content) => {
-    if (err) {
-      res.writeHead(500);
-      res.end('Internal Server Error');
-    } else {
-      res.writeHead(200, {
-        'Content-Type': contentType,
-        'Cache-Control':
-          ext === '.html' ? 'no-cache' : 'public, max-age=31536000, immutable',
-      });
-      res.end(content);
+export function createGameServer(options: ServerOptions = {}) {
+  const manager = new SessionManager(options);
+  const dist = path.resolve(options.distPath ?? DIST_PATH);
+  const server = http.createServer((req, res) => {
+    if (req.url === '/healthz') { res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ status: 'ok' })); return; }
+    if (req.method !== 'GET' && req.method !== 'HEAD') { res.writeHead(405); res.end(); return; }
+    let pathname: string;
+    try { pathname = decodeURIComponent((req.url ?? '/').split('?')[0]); } catch { res.writeHead(400); res.end(); return; }
+    // Reject encoded/backslash traversal before resolving; directory prefix alone is insufficient.
+    if (pathname.includes('\0') || pathname.includes('\\') || pathname.split('/').includes('..')) { res.writeHead(403); res.end(); return; }
+    if (!fs.existsSync(dist)) { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }); res.end('<h1>變體象棋伺服器已就緒</h1><p>開發前端：http://localhost:5173</p>'); return; }
+    let target = path.resolve(dist, '.' + (pathname === '/' ? '/index.html' : pathname));
+    const relative = path.relative(dist, target);
+    if (relative.startsWith('..') || path.isAbsolute(relative)) { res.writeHead(403); res.end(); return; }
+    if (!fs.existsSync(target) || fs.statSync(target).isDirectory()) target = path.join(dist, 'index.html');
+    const ext = path.extname(target);
+    fs.readFile(target, (error, content) => {
+      if (error) { res.writeHead(500); res.end('Internal Server Error'); return; }
+      res.writeHead(200, { 'Content-Type': MIME[ext] ?? 'application/octet-stream', 'Cache-Control': ext === '.html' ? 'no-cache' : 'public, max-age=31536000, immutable' });
+      res.end(req.method === 'HEAD' ? undefined : content);
+    });
+  });
+  const wss = new WebSocketServer({ server, maxPayload: 16384 });
+  const alive = new WeakMap<WebSocket, boolean>();
+  const heartbeat = setInterval(() => {
+    for (const ws of wss.clients) {
+      if (alive.get(ws) === false) { ws.terminate(); continue; }
+      alive.set(ws, false); ws.ping();
     }
-  });
-});
-
-// 2. 將 WebSocket 掛載至同一個 HTTP 伺服器 (單一連接埠合一)
-const wss = new WebSocketServer({ server });
-
-// 儲存當前進行中的 GameSession
-const sessions = new Map<string, { session: GameSession; ws: WebSocket }>();
-
-function send(ws: WebSocket, event: ServerEvent) {
-  if (ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify(event));
-  }
-}
-
-function sendError(ws: WebSocket, code: string, message: string) {
-  send(ws, {
-    event: 'ERROR',
-    payload: { code, message },
-  });
-}
-
-wss.on('connection', (ws: WebSocket) => {
-  console.log('📡 收到新的 WebSocket 連線');
-
-  let activeGameId: string | null = null;
-
-  ws.on('message', async (data: string) => {
-    try {
-      const msg: ClientAction = JSON.parse(data.toString());
-
-      switch (msg.action) {
-        case 'START_GAME': {
-          const mode = msg.payload.gameMode || 'PVE';
-          console.log(`🎮 玩家開局請求: [${mode}]`);
-          const session = new GameSession(msg.payload);
-          await session.init();
-
-          activeGameId = session.gameId;
-          sessions.set(session.gameId, { session, ws });
-
-          console.log(`✅ 對局建立成功: ${session.gameId}`);
-          send(ws, {
-            event: 'GAME_STATE',
-            payload: session.getState(),
-          });
-          break;
+  }, options.heartbeatMs ?? 30000);
+  heartbeat.unref();
+  wss.on('connection', ws => {
+    const context: ConnectionContext = { gameId: null, starting: false, closed: false };
+    const requests = new Map<string, { fingerprint: string; result: Promise<ServerEvent> }>();
+    let inFlight = 0;
+    let windowStart = Date.now();
+    let messages = 0;
+    alive.set(ws, true);
+    ws.on('pong', () => alive.set(ws, true));
+    ws.on('error', () => ws.terminate());
+    ws.on('message', async (raw, isBinary) => {
+      let requestId: string | undefined;
+      let gameId: string | undefined;
+      try {
+        if (Date.now() - windowStart > 60000) { windowStart = Date.now(); messages = 0; }
+        if (++messages > 120 || inFlight >= 16) throw new GameError('RATE_LIMITED', '操作過於頻繁，請稍後再試');
+        if (isBinary) throw new GameError('INVALID_PAYLOAD', '請使用 JSON 文字封包');
+        let data: unknown;
+        try { data = JSON.parse(raw.toString()); } catch { throw new GameError('INVALID_PAYLOAD', 'JSON 格式錯誤'); }
+        if (data && typeof data === 'object' && 'requestId' in data && typeof data.requestId === 'string' && data.requestId.length <= 80) requestId = data.requestId;
+        const msg = parseAction(data);
+        requestId = msg.requestId;
+        gameId = 'gameId' in msg.payload ? msg.payload.gameId : undefined;
+        const fingerprint = JSON.stringify(msg);
+        let cached = requests.get(msg.requestId);
+        if (cached && cached.fingerprint !== fingerprint) throw new GameError('REQUEST_CONFLICT', '請求編號不可重複用於不同操作');
+        if (!cached) {
+          const result = (async (): Promise<ServerEvent> => {
+            switch (msg.action) {
+              case 'LIST_CHALLENGES': return { event: 'CHALLENGE_LIST', requestId: msg.requestId, payload: CHALLENGES.map(publicChallenge) };
+              case 'START_GAME': return manager.start(ws, context, msg.payload, msg.requestId);
+              case 'RECONNECT': return manager.reconnect(ws, context, msg.payload.gameId, msg.payload.resumeToken, msg.requestId);
+              default: return manager.operate(ws, msg);
+            }
+          })();
+          cached = { fingerprint, result };
+          requests.set(msg.requestId, cached);
+          if (requests.size > 256) requests.delete(requests.keys().next().value!);
         }
-
-        case 'MAKE_MOVE': {
-          const { gameId, from, to } = msg.payload;
-          const entry = sessions.get(gameId);
-          if (!entry) {
-            sendError(ws, 'GAME_NOT_FOUND', '找不到對局或已過期');
-            return;
-          }
-
-          console.log(`♟️ 走步: ${from} -> ${to}`);
-          try {
-            await entry.session.makePlayerMove(from, to);
-            send(ws, {
-              event: 'GAME_STATE',
-              payload: entry.session.getState(),
-            });
-          } catch (err: any) {
-            console.warn(`⚠️ 走步失敗: ${err.message}`);
-            sendError(ws, 'ILLEGAL_MOVE', err.message);
-          }
-          break;
-        }
-
-        case 'RESIGN': {
-          const { gameId } = msg.payload;
-          const entry = sessions.get(gameId);
-          if (entry) {
-            console.log(`🏳️ 玩家認輸: ${gameId}`);
-            entry.session.resign();
-            send(ws, {
-              event: 'GAME_STATE',
-              payload: entry.session.getState(),
-            });
-          }
-          break;
-        }
-
-        case 'RECONNECT': {
-          const { gameId } = msg.payload;
-          const entry = sessions.get(gameId);
-          if (entry) {
-            console.log(`🔄 玩家重連: ${gameId}`);
-            activeGameId = gameId;
-            entry.ws = ws;
-            send(ws, {
-              event: 'GAME_STATE',
-              payload: entry.session.getState(),
-            });
-          } else {
-            sendError(ws, 'SESSION_EXPIRED', '該局已結束或不存在');
-          }
-          break;
-        }
-
-        default:
-          sendError(ws, 'INVALID_ACTION', '未知的請求類型');
+        inFlight++;
+        try {
+          const event = await cached.result;
+          if (event.event === 'GAME_LEFT' && context.gameId === event.payload.gameId) context.gameId = null;
+          // A superseded START response must not overwrite a newer game on the client.
+          const responseGameId = event.event === 'GAME_STARTED' ? event.payload.state.gameId : event.event === 'GAME_STATE' || event.event === 'CHALLENGE_HINT' ? event.payload.gameId : undefined;
+          if (!responseGameId || responseGameId === context.gameId) send(ws, event);
+          if (responseGameId) manager.sync(ws, responseGameId);
+        } finally { inFlight--; }
+      } catch (error) {
+        const safe = asGameError(error);
+        if (safe.code === 'INTERNAL_ERROR') console.error('Request failure', error);
+        send(ws, { event: 'ERROR', requestId, payload: { code: safe.code, message: safe.message } });
+        if (gameId) manager.sync(ws, gameId);
       }
-    } catch (err: any) {
-      console.error('❌ 處理封包時發生異常:', err);
-      sendError(ws, 'INTERNAL_ERROR', err.message || '伺服器內部錯誤');
-    }
+    });
+    ws.on('close', () => { manager.disconnect(ws, context); requests.clear(); });
   });
-
-  ws.on('close', () => {
-    console.log(`🔌 連線斷開: ${activeGameId || '未知'}`);
-    if (activeGameId) {
-      const entry = sessions.get(activeGameId);
-      if (entry) {
-        entry.session.destroy();
-        sessions.delete(activeGameId);
-        console.log(`🧹 已釋放 GameSession: ${activeGameId}`);
-      }
-    }
+  return {
+    server, wss, manager,
+    async close(): Promise<void> {
+      clearInterval(heartbeat); manager.close();
+      for (const ws of wss.clients) ws.terminate();
+      await new Promise<void>(resolve => wss.close(() => resolve()));
+      if (server.listening) await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
+    },
+  };
+}
+function envInt(name: string, fallback: number): number {
+  const value = Number(process.env[name] ?? fallback);
+  if (!Number.isSafeInteger(value) || value < 1) throw new Error(`Invalid ${name}`);
+  return value;
+}
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const hashMb = envInt('ENGINE_HASH_MB', 16);
+  const threads = envInt('ENGINE_THREADS', 1);
+  if (hashMb > 256 || threads > 4) throw new Error('ENGINE_HASH_MB must be <= 256; ENGINE_THREADS must be <= 4');
+  const app = createGameServer({
+    reconnectMs: envInt('RECONNECT_MS', 120000), resultMs: envInt('RESULT_MS', 120000), idleMs: envInt('IDLE_MS', 900000),
+    maxEngines: envInt('MAX_ENGINES', 16), maxSessions: envInt('MAX_SESSIONS', 128),
+    engineFactory: () => new FairyEngine(undefined, undefined, undefined, { hashMb, threads }),
   });
-});
-
-// 3. 啟動監聽 (支援 0.0.0.0 供 Docker / GCP Cloud Run 對外連接)
-server.listen(PORT, HOST, () => {
-  console.log(`🚀 變體象棋全端整合伺服器啟動於 http://${HOST}:${PORT}`);
-  console.log(`📡 WebSocket 服務就緒於 ws://${HOST}:${PORT}`);
-});
+  const port = envInt('PORT', 8080);
+  app.server.listen(port, process.env.HOST ?? '0.0.0.0', () => console.log(`變體象棋伺服器：http://localhost:${port}`));
+  let closing = false;
+  for (const signal of ['SIGINT', 'SIGTERM'] as const) process.on(signal, () => {
+    if (!closing) { closing = true; void app.close().catch(error => { console.error(error); process.exitCode = 1; }); }
+  });
+}

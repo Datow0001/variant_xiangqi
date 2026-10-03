@@ -24,8 +24,14 @@ function goToLoadout() {
     </div>
 
     <!-- 對弈模式切換頁籤 -->
+    <div class="flex justify-center mb-4">
+      <button @click="store.showChallenges()" class="bg-emerald-700 hover:bg-emerald-600 rounded-2xl px-8 py-4 font-bold text-lg">⚡ 短局挑戰 · 限步解題</button>
+    </div>
+    <div v-if="store.challengeProgress.lastChallengeId" class="text-center mb-6">
+      <button @click="store.continueChallenges()" class="text-emerald-300 underline underline-offset-4">繼續上次挑戰 →</button>
+    </div>
     <div class="flex justify-center mb-8">
-      <div class="inline-flex p-1.5 rounded-2xl bg-slate-800/90 border border-slate-700 shadow-xl">
+      <div class="inline-flex flex-wrap justify-center p-1.5 rounded-2xl bg-slate-800/90 border border-slate-700 shadow-xl">
         <button
           @click="store.gameMode = 'PVE'"
           :class="[

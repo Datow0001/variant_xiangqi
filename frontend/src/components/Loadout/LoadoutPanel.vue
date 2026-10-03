@@ -114,7 +114,7 @@ function applyPreset(presetName: string) {
     <!-- 頂部導航與狀態列 -->
     <div class="flex flex-wrap items-center justify-between gap-4 bg-slate-800/90 border border-slate-700 rounded-2xl p-5 mb-6 shadow-xl backdrop-blur">
       <button
-        @click="store.status = 'STAGE_SELECT'"
+        @click="store.requestConfirmation('LEAVE')"
         class="text-slate-400 hover:text-slate-200 text-sm font-semibold flex items-center gap-1.5 transition-colors"
       >
         ← 返回模式選擇 ({{ store.gameMode === 'PVE' ? `關卡: ${STAGES[store.stageId].name}` : '雙人對戰' }})
@@ -273,6 +273,7 @@ function applyPreset(presetName: string) {
     <div class="flex justify-center gap-4">
       <button
         @click="store.startGame()"
+        :disabled="store.isStarting"
         class="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-black text-xl py-4 px-14 rounded-2xl shadow-xl shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all duration-200"
       >
         {{ store.gameMode === 'PVP' ? '雙方就緒，開局對弈！ ⚔️' : '開局對弈！ ⚔️' }}

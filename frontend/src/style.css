@@ -5,6 +5,24 @@
 body {
   font-family: 'Noto Serif TC', serif;
 }
+html { color-scheme: dark; }
+body { margin: 0; }
+.app-shell {
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+button, [role="button"] { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+button { min-height: 44px; }
+button:disabled { cursor: not-allowed; opacity: .5; }
+button:focus-visible, [role="button"]:focus-visible { outline: 3px solid #38bdf8; outline-offset: 3px; }
+.confirm-dialog::backdrop { background: rgb(2 6 23 / .8); backdrop-filter: blur(3px); }
+.board-size { width: min(100%, 520px); }
+.board-square { user-select: none; }
+@media (max-height: 500px) and (orientation: landscape) { .board-size { max-width: 330px; } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}
 
 .piece-font {
   font-family: 'Noto Serif TC', serif;

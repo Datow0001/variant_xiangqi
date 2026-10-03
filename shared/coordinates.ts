@@ -7,7 +7,7 @@ export interface Position {
 
 /** 將 UCI 座標 (如 "b0", "c2") 轉為數值 { col, row } */
 export function uciToPos(uci: string): Position {
-  if (uci.length < 2) {
+  if (!isValidUci(uci)) {
     throw new Error(`Invalid UCI coordinate: ${uci}`);
   }
   const col = uci.charCodeAt(0) - 97; // 'a'.charCodeAt(0) === 97
@@ -17,6 +17,9 @@ export function uciToPos(uci: string): Position {
 
 /** 將數值 { col, row } 轉為 UCI 座標 (如 "b0") */
 export function posToUci(col: number, row: number): string {
+  if (!Number.isInteger(col) || !Number.isInteger(row) || col < 0 || col > 8 || row < 0 || row > 9) {
+    throw new Error('Invalid board position');
+  }
   const file = String.fromCharCode(97 + col);
   return `${file}${row}`;
 }
@@ -42,6 +45,7 @@ export function appToEngineSquare(appSquare: string): string {
  * Fairy-Stockfish UCI 引擎坐標 (Rank 1~10, 如 "b1", "b10") 轉換為 系統坐標 (Rank 0~9, 如 "b0", "b9")
  */
 export function engineToAppSquare(engineSquare: string): string {
+  if (!/^[a-i](?:[1-9]|10)$/.test(engineSquare)) throw new Error('Invalid engine square');
   const col = engineSquare.charAt(0);
   const rank = parseInt(engineSquare.substring(1), 10);
   return `${col}${rank - 1}`;

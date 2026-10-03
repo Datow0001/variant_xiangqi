@@ -59,13 +59,54 @@ export interface Move {
   to: string;   // e.g. 'c2'
 }
 
-export type GameMode = 'PVE' | 'PVP';
+export type GameMode = 'PVE' | 'PVP' | 'CHALLENGE';
+
+export interface ChallengeSummary {
+  chapter: 1 | 2 | 3;
+  difficulty: '入門' | '進階' | '綜合';
+  themes: string[];
+  learningPoint: string;
+  contentVersion: number;
+  id: string;
+  name: string;
+  description: string;
+  order: number;
+  playerColor: 'red' | 'black';
+  goalText: string;
+  maxPlayerMoves: number;
+  budget: number;
+  allowedUpgrades: LoadoutItem[];
+  nextChallengeId: string | null;
+}
+export type ChallengeOutcome = 'ACTIVE' | 'SUCCEEDED' | 'FAILED' | 'INTERRUPTED';
+export type ChallengeReason = 'CHECKMATE' | 'TARGET_CAPTURED' | 'MOVE_LIMIT' | 'PLAYER_DEFEATED' | 'OBJECTIVE_NOT_MET' | 'RESIGN' | 'INTERRUPTED';
+export interface ChallengeHint {
+  level: 'DIRECTION' | 'MOVE';
+  text: string;
+  move: Move | null;
+  version: number;
+}
+export interface ChallengeState {
+  definition: ChallengeSummary;
+  outcome: ChallengeOutcome;
+  reason: ChallengeReason | null;
+  playerMoves: number;
+  remainingMoves: number;
+  targetSquare: string | null;
+  directionHintUses: number;
+  moveHintUses: number;
+  hints: ChallengeHint[];
+  stars: number;
+  explanation: string | null;
+  failureExplanation: string | null;
+}
 
 // -----------------------------------------------------------------------------
 // WebSocket 請求與回應封包
 // -----------------------------------------------------------------------------
 
 export interface StartGamePayload {
+  challengeId?: string;
   gameMode?: GameMode; // 預設 'PVE'
   stageId?: 1 | 2 | 3; // PVE 模式必填
   playerColor?: 'red' | 'black'; // PVE 模式玩家陣營
@@ -79,15 +120,27 @@ export interface MovePayload {
   gameId: string;
   from: string;
   to: string;
+  expectedVersion: number;
 }
 
-export type ClientAction =
+export type SessionStatus = 'INITIALIZING' | 'READY' | 'PROCESSING' | 'AI_THINKING' | 'FINISHED' | 'FAULTED';
+
+export type ClientAction = ({ requestId: string } & (
   | { action: 'START_GAME'; payload: StartGamePayload }
   | { action: 'MAKE_MOVE'; payload: MovePayload }
   | { action: 'RESIGN'; payload: { gameId: string } }
-  | { action: 'RECONNECT'; payload: { gameId: string } };
+  | { action: 'RECONNECT'; payload: { gameId: string; resumeToken: string } }
+  | { action: 'LIST_CHALLENGES'; payload: Record<string, never> }
+  | { action: 'REQUEST_HINT'; payload: { gameId: string; level: 'DIRECTION' | 'MOVE'; expectedVersion: number } }
+  | { action: 'LEAVE_GAME'; payload: { gameId: string } }));
 
 export interface GameStatePayload {
+  challenge: ChallengeState | null;
+  version: number;
+  status: SessionStatus;
+  playerColor?: 'red' | 'black';
+  redLoadouts: LoadoutItem[];
+  blackLoadouts: LoadoutItem[];
   gameId: string;
   gameMode: GameMode;
   stageId?: number;
@@ -99,7 +152,7 @@ export interface GameStatePayload {
   isCheck: boolean;
   isGameOver: boolean;
   winner: 'red' | 'black' | 'draw' | null;
-  gameOverReason: 'CHECKMATE' | 'STALEMATE' | 'RESIGN' | 'REPETITION' | null;
+  gameOverReason: 'CHECKMATE' | 'STALEMATE' | 'RESIGN' | 'REPETITION' | 'CHALLENGE_COMPLETE' | 'MOVE_LIMIT' | null;
 }
 
 export interface ErrorPayload {
@@ -108,5 +161,9 @@ export interface ErrorPayload {
 }
 
 export type ServerEvent =
-  | { event: 'GAME_STATE'; payload: GameStatePayload }
-  | { event: 'ERROR'; payload: ErrorPayload };
+  | { event: 'CHALLENGE_LIST'; payload: ChallengeSummary[]; requestId: string }
+  | { event: 'CHALLENGE_HINT'; payload: { gameId: string; hint: ChallengeHint; available: boolean; state: GameStatePayload }; requestId: string }
+  | { event: 'GAME_STATE'; payload: GameStatePayload; requestId?: string }
+  | { event: 'GAME_STARTED'; payload: { state: GameStatePayload; resumeToken: string }; requestId: string }
+  | { event: 'GAME_LEFT'; payload: { gameId: string }; requestId: string }
+  | { event: 'ERROR'; payload: ErrorPayload; requestId?: string };

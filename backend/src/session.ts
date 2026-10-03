@@ -1,20 +1,23 @@
-import { FairyEngine } from './FairyEngine';
-import {
-  GameMode,
-  GameStatePayload,
-  LoadoutItem,
-  Move,
-  StartGamePayload,
-} from '../../shared/types';
-import {
-  generateInitialFen,
-  generateCustomFen,
-  applyMoveToFen,
-} from '../../shared/fen';
+import { randomUUID } from 'node:crypto';
+import { Engine, FairyEngine } from './FairyEngine';
+import { ChallengeHint, GameMode, GameStatePayload, LoadoutItem, Move, SessionStatus, StartGamePayload } from '../../shared/types';
+import { applyLoadoutsToFen, applyMoveToFen, generateCustomFen, generateInitialFen, validateInitialFen } from '../../shared/fen';
+import { getChallenge } from './challenges';
+import { ChallengeRuntime } from './ChallengeRuntime';
 import { STAGES } from '../../shared/stages';
+import { GameError } from './errors';
+import { normalizeStart } from './validation';
 
+/** Trusted server-authored position; never accepted from the public socket. */
+export interface SessionOptions {
+  initialFen?: string;
+  movetimeMs?: number;
+  engineFactory?: () => Engine;
+  onState?: (state: GameStatePayload) => void;
+  onFault?: (error: GameError) => void;
+}
 export class GameSession {
-  public readonly gameId: string;
+  public readonly gameId = randomUUID();
   public readonly gameMode: GameMode;
   public readonly stageId?: 1 | 2 | 3;
   public readonly playerColor?: 'red' | 'black';
@@ -22,198 +25,156 @@ export class GameSession {
   public readonly redLoadouts: LoadoutItem[];
   public readonly blackLoadouts: LoadoutItem[];
   public aiLoadouts: LoadoutItem[] = [];
-
-  public fen: string = '';
+  public fen = '';
+  public initialFen = '';
+  public readonly history: Move[] = [];
   public currentTurn: 'red' | 'black' = 'red';
   public lastMove: Move | null = null;
   public legalMoves: Move[] = [];
-  public isCheck: boolean = false;
-  public isGameOver: boolean = false;
-  public winner: 'red' | 'black' | 'draw' | null = null;
-  public gameOverReason:
-    | 'CHECKMATE'
-    | 'STALEMATE'
-    | 'RESIGN'
-    | 'REPETITION'
-    | null = null;
+  public isCheck = false;
+  public isGameOver = false;
+  public winner: GameStatePayload['winner'] = null;
+  public gameOverReason: GameStatePayload['gameOverReason'] = null;
+  public status: SessionStatus = 'INITIALIZING';
+  public version = 0;
+  private engine: Engine;
+  private busy = false;
+  private destroyed = false;
+  private generation = 0;
+  private challenge: ChallengeRuntime | null = null;
 
-  private engine: FairyEngine;
-  private isThinking: boolean = false;
-
-  constructor(payload: StartGamePayload) {
-    this.gameId =
-      globalThis.crypto?.randomUUID
-        ? globalThis.crypto.randomUUID()
-        : Math.random().toString(36).substring(2);
-    this.gameMode = payload.gameMode || 'PVE';
-    this.stageId = payload.stageId;
-    this.playerColor = payload.playerColor;
-    this.playerLoadouts = payload.loadouts || [];
-    this.redLoadouts = payload.redLoadouts || [];
-    this.blackLoadouts = payload.blackLoadouts || [];
-    this.engine = new FairyEngine();
-  }
-
-  /**
-   * 初始化對局：
-   * - PVE: 依玩家陣營、升級與關卡生成 FEN；若玩家執黑，AI 自動出第一步。
-   * - PVP: 依紅黑雙方自訂陣容生成 FEN，紅方先手，計算首步合法步，不觸發 AI。
-   */
-  public async init(): Promise<void> {
-    await this.engine.waitReady();
-
-    if (this.gameMode === 'PVP') {
-      this.fen = generateCustomFen(this.redLoadouts, this.blackLoadouts);
-      this.aiLoadouts = [];
-      this.currentTurn = 'red';
-      await this.updateGameState();
+  constructor(payload: StartGamePayload, private options: SessionOptions = {}) {
+    const config = normalizeStart(payload);
+    this.gameMode = config.gameMode!;
+    this.stageId = config.stageId;
+    this.playerColor = config.playerColor;
+    this.playerLoadouts = config.loadouts ?? [];
+    if (this.gameMode === 'CHALLENGE') {
+      const definition = getChallenge(config.challengeId!)!;
+      this.challenge = new ChallengeRuntime(definition);
+      this.fen = applyLoadoutsToFen(definition.initialFen, this.playerLoadouts, definition.playerColor);
+    } else if (options.initialFen !== undefined) {
+      try { validateInitialFen(options.initialFen); } catch { throw new GameError('INVALID_FEN', '指定盤面格式或基本棋子位置錯誤'); }
+      if (this.playerLoadouts.length || config.redLoadouts?.length || config.blackLoadouts?.length) throw new GameError('INVALID_PAYLOAD', '指定盤面須已包含升級棋子');
+      this.fen = options.initialFen.trim().replace(/\s+/g, ' ');
+    } else if (this.gameMode === 'PVP') {
+      this.fen = generateCustomFen(config.redLoadouts ?? [], config.blackLoadouts ?? []);
     } else {
-      const { fen, aiLoadouts } = generateInitialFen(
-        this.playerColor || 'red',
-        this.playerLoadouts,
-        this.stageId || 1
-      );
-      this.fen = fen;
-      this.aiLoadouts = aiLoadouts;
-      this.currentTurn = 'red';
-
-      // 如果玩家執黑，AI 是紅方，AI 需先手出第一步
-      if (this.playerColor === 'black') {
-        await this.executeAiMove();
-      } else {
-        await this.updateGameState();
-      }
+      const initial = generateInitialFen(this.playerColor!, this.playerLoadouts, this.stageId!);
+      this.fen = initial.fen;
+      this.aiLoadouts = initial.aiLoadouts;
     }
+    this.redLoadouts = this.gameMode === 'PVP' ? config.redLoadouts! : this.playerColor === 'red' ? this.playerLoadouts : this.aiLoadouts;
+    this.blackLoadouts = this.gameMode === 'PVP' ? config.blackLoadouts! : this.playerColor === 'black' ? this.playerLoadouts : this.aiLoadouts;
+    if (options.movetimeMs !== undefined && (!Number.isInteger(options.movetimeMs) || options.movetimeMs < 1 || options.movetimeMs > 10000)) throw new GameError('INVALID_PAYLOAD', 'AI 思考時間錯誤');
+    this.initialFen = this.fen;
+    this.currentTurn = this.fen.split(' ')[1] === 'w' ? 'red' : 'black';
+    this.engine = (options.engineFactory ?? (() => new FairyEngine()))();
+    this.engine.onFailure = error => this.fault(error);
   }
-
-  /**
-   * 刷新當前盤面的合法步與將軍狀態
-   */
-  private async updateGameState(): Promise<void> {
-    this.legalMoves = await this.engine.getLegalMoves(this.fen);
-    this.isCheck = await this.engine.isCheck(this.fen);
-
-    // 如果當前行棋方沒有任何合法步，代表被將死 (Checkmate) 或困斃 (Stalemate)
-    if (this.legalMoves.length === 0) {
-      this.isGameOver = true;
-      // 在象棋中，輪到走棋卻無步可走，該方直接判負 (無論是否被將軍)
-      const loser = this.currentTurn;
-      this.winner = loser === 'red' ? 'black' : 'red';
-      this.gameOverReason = this.isCheck ? 'CHECKMATE' : 'STALEMATE';
-    }
+  private live(generation: number): void {
+    if (this.destroyed || generation !== this.generation || this.status === 'FAULTED') throw new GameError('SESSION_CLOSED', '對局已停止');
   }
-
-  /**
-   * 執行走步
-   */
-  public async makePlayerMove(
-    from: string,
-    to: string
-  ): Promise<GameStatePayload> {
-    if (this.isGameOver) {
-      throw new Error('對局已結束，無法再行棋！');
-    }
-
-    if (this.gameMode === 'PVE') {
-      if (this.currentTurn !== this.playerColor) {
-        throw new Error('尚未輪到您的回合！');
-      }
-      if (this.isThinking) {
-        throw new Error('AI 正在思考中，請稍候！');
-      }
-    }
-
-    // 檢查是否為合法步
-    const isLegal = this.legalMoves.some((m) => m.from === from && m.to === to);
-    if (!isLegal) {
-      throw new Error(`非法走步: ${from} -> ${to}`);
-    }
-
-    // 1. 套用走步
-    this.fen = applyMoveToFen(this.fen, from, to);
-    this.lastMove = { from, to };
-    this.currentTurn = this.currentTurn === 'red' ? 'black' : 'red';
-
-    // 2. 更新盤面狀態
-    await this.updateGameState();
-
-    // 3. 若為 PVE 且遊戲尚未結束，觸發 AI 行棋
-    if (this.gameMode === 'PVE' && !this.isGameOver) {
-      await this.executeAiMove();
-    }
-
-    return this.getState();
+  private emit(): void { this.options.onState?.(this.getState()); }
+  private finish(): void {
+    this.status = 'FINISHED'; this.isGameOver = true; this.legalMoves = []; this.generation++; this.engine.destroy();
   }
-
-  /**
-   * 觸發 AI 計算並走步 (僅 PVE 模式)
-   */
-  public async executeAiMove(): Promise<void> {
-    this.isThinking = true;
-    try {
-      const stageConfig = STAGES[this.stageId || 1] || STAGES[1];
-      const movetime = stageConfig.movetimeMs;
-
-      // 取得 AI 最佳步
-      const bestMove = await this.engine.getBestMove(this.fen, movetime);
-
-      if (!bestMove) {
-        // AI 無步可走，玩家獲勝
-        this.isGameOver = true;
-        this.winner = this.playerColor || 'red';
-        this.gameOverReason = this.isCheck ? 'CHECKMATE' : 'STALEMATE';
-        return;
-      }
-
-      // 套用 AI 走步
-      this.fen = applyMoveToFen(this.fen, bestMove.from, bestMove.to);
-      this.lastMove = bestMove;
-      this.currentTurn = this.playerColor || 'red';
-
-      // 刷新盤面供玩家操作
-      await this.updateGameState();
-    } finally {
-      this.isThinking = false;
-    }
+  public fault(error: GameError): void {
+    if (this.destroyed || this.isGameOver || this.status === 'FAULTED') return;
+    this.status = 'FAULTED'; this.legalMoves = []; this.generation++; this.engine.destroy();
+    this.challenge?.settle('INTERRUPTED', 'INTERRUPTED');
+    this.options.onFault?.(error); this.emit();
   }
-
-  /**
-   * 認輸
-   */
-  public resign(): GameStatePayload {
-    this.isGameOver = true;
-    if (this.gameMode === 'PVP') {
-      // 誰的回合認輸，對方獲勝
+  private async refresh(generation: number): Promise<void> {
+    const moves = await this.engine.getLegalMoves(this.fen);
+    this.live(generation);
+    const check = await this.engine.isCheck(this.fen);
+    this.live(generation);
+    this.legalMoves = moves; this.isCheck = check;
+    if (!moves.length) {
       this.winner = this.currentTurn === 'red' ? 'black' : 'red';
-    } else {
-      this.winner = this.playerColor === 'red' ? 'black' : 'red';
+      this.gameOverReason = check ? 'CHECKMATE' : 'STALEMATE';
+      if (this.challenge) {
+        const success = this.winner === this.playerColor && check && this.challenge.definition.goal.type === 'CHECKMATE';
+        this.challenge.settle(success ? 'SUCCEEDED' : 'FAILED', success ? 'CHECKMATE' : this.winner !== this.playerColor ? 'PLAYER_DEFEATED' : 'OBJECTIVE_NOT_MET');
+      }
+      this.finish();
     }
-    this.gameOverReason = 'RESIGN';
+  }
+  public async init(): Promise<void> {
+    if (this.status !== 'INITIALIZING') throw new GameError('SESSION_BUSY', '對局已初始化');
+    const generation = this.generation;
+    try {
+      await this.engine.waitReady(); this.live(generation);
+      await this.refresh(generation);
+      if (!this.isGameOver && this.gameMode !== 'PVP' && this.currentTurn !== this.playerColor) await this.aiMove(generation);
+      if (!this.isGameOver) this.status = 'READY';
+    } catch (error) { this.fault(error instanceof GameError ? error : new GameError('ENGINE_ERROR', '對弈引擎處理失敗')); throw error; }
+  }
+  private apply(move: Move): void {
+    this.challenge?.recordMove(move, this.currentTurn);
+    this.fen = applyMoveToFen(this.fen, move.from, move.to);
+    this.history.push({ ...move }); this.lastMove = { ...move }; this.version++;
+    this.currentTurn = this.fen.split(' ')[1] === 'w' ? 'red' : 'black';
     this.legalMoves = [];
-    return this.getState();
   }
-
-  /**
-   * 取得最新 GameStatePayload
-   */
+  private async aiMove(generation: number): Promise<void> {
+    this.status = 'AI_THINKING'; this.emit();
+    const move = await this.engine.getBestMove(this.fen, this.options.movetimeMs ?? this.challenge?.definition.movetimeMs ?? STAGES[this.stageId ?? 1].movetimeMs);
+    this.live(generation);
+    if (!move || !this.legalMoves.some(m => m.from === move.from && m.to === move.to)) throw new GameError('ENGINE_INVALID_MOVE', '對弈引擎回傳不合法走步');
+    this.apply(move); await this.refresh(generation);
+  }
+  public async makePlayerMove(from: string, to: string, expectedVersion = this.version): Promise<GameStatePayload> {
+    if (this.destroyed || this.status === 'FAULTED') throw new GameError('SESSION_CLOSED', '對局已中斷');
+    if (this.isGameOver) throw new GameError('GAME_OVER', '對局已結束');
+    if (this.busy || this.status !== 'READY') throw new GameError('SESSION_BUSY', '請等待目前操作完成');
+    if (expectedVersion !== this.version) throw new GameError('STALE_STATE', '盤面已更新，請依最新盤面走棋');
+    if (this.gameMode !== 'PVP' && this.currentTurn !== this.playerColor) throw new GameError('NOT_YOUR_TURN', '尚未輪到您的回合');
+    if (!this.legalMoves.some(m => m.from === from && m.to === to)) throw new GameError('ILLEGAL_MOVE', '這一步不符合目前合法走步');
+    this.busy = true;
+    this.status = 'PROCESSING';
+    const generation = this.generation;
+    try {
+      this.apply({ from, to });
+      if (this.challenge?.captureSucceeded) {
+        this.challenge.settle('SUCCEEDED', 'TARGET_CAPTURED');
+        this.winner = this.playerColor!; this.gameOverReason = 'CHALLENGE_COMPLETE'; this.finish();
+      } else {
+        await this.refresh(generation);
+        if (!this.isGameOver && this.challenge?.limitReached) {
+          this.challenge.settle('FAILED', 'MOVE_LIMIT');
+          this.winner = null; this.gameOverReason = 'MOVE_LIMIT'; this.finish();
+        }
+      }
+      if (!this.isGameOver && this.gameMode !== 'PVP') await this.aiMove(generation);
+      if (!this.isGameOver) this.status = 'READY';
+      return this.getState();
+    } catch (error) {
+      this.fault(error instanceof GameError ? error : new GameError('ENGINE_ERROR', '對弈引擎處理失敗'));
+      throw error;
+    } finally { this.busy = false; }
+  }
+  public resign(): GameStatePayload {
+    if (this.destroyed || this.status === 'FAULTED') throw new GameError('SESSION_CLOSED', '對局已中斷');
+    if (this.isGameOver) throw new GameError('GAME_OVER', '對局已結束');
+    this.winner = (this.gameMode === 'PVP' ? this.currentTurn : this.playerColor) === 'red' ? 'black' : 'red';
+    this.challenge?.settle('FAILED', 'RESIGN');
+    this.gameOverReason = 'RESIGN'; this.version++; this.finish(); return this.getState();
+  }
+  public requestHint(level: 'DIRECTION' | 'MOVE', expectedVersion: number): { hint: ChallengeHint; available: boolean } {
+    if (!this.challenge) throw new GameError('INVALID_ACTION', '只有短局挑戰可以使用提示');
+    if (this.status !== 'READY' || this.busy || this.isGameOver || this.destroyed) throw new GameError('SESSION_BUSY', '目前無法使用提示');
+    if (expectedVersion !== this.version) throw new GameError('STALE_STATE', '盤面已更新，請重新取得提示');
+    if (this.currentTurn !== this.playerColor) throw new GameError('NOT_YOUR_TURN', '請等待您的回合');
+    return this.challenge.hint(level, this.fen, this.legalMoves, this.version);
+  }
   public getState(): GameStatePayload {
-    return {
-      gameId: this.gameId,
-      gameMode: this.gameMode,
-      stageId: this.stageId,
-      fen: this.fen,
-      currentTurn: this.currentTurn,
-      lastMove: this.lastMove,
-      legalMoves: this.isGameOver ? [] : this.legalMoves,
-      aiLoadouts: this.aiLoadouts,
-      isCheck: this.isCheck,
-      isGameOver: this.isGameOver,
-      winner: this.winner,
-      gameOverReason: this.gameOverReason,
-    };
+    return { gameId: this.gameId, version: this.version, status: this.status, gameMode: this.gameMode,
+      stageId: this.stageId, playerColor: this.playerColor, redLoadouts: this.redLoadouts.map(x => ({ ...x })), blackLoadouts: this.blackLoadouts.map(x => ({ ...x })),
+      fen: this.fen, currentTurn: this.currentTurn, lastMove: this.lastMove && { ...this.lastMove }, legalMoves: this.legalMoves.map(x => ({ ...x })),
+      aiLoadouts: this.aiLoadouts.map(x => ({ ...x })), isCheck: this.isCheck, isGameOver: this.isGameOver, winner: this.winner, gameOverReason: this.gameOverReason,
+      challenge: this.challenge?.getState() ?? null };
   }
-
-  public destroy(): void {
-    this.engine.destroy();
-  }
+  public destroy(): void { if (this.destroyed) return; this.destroyed = true; this.generation++; this.engine.destroy(); }
 }

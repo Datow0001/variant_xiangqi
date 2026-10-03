@@ -1,0 +1,479 @@
+{
+  "schemaVersion": 1,
+  "engineVariant": "customxiangqi",
+  "coverage": "All legal opponent replies along a proven strategy; every budget-valid loadout; bounded player moves. Not historical reachability or a complete enumeration of all player solutions.",
+  "results": [
+    {
+      "id": "rook-mate",
+      "configurations": [
+        {
+          "loadouts": [],
+          "solvable": true,
+          "minimumPlayerMoves": 1
+        }
+      ],
+      "referenceMinimumMoves": 1,
+      "referenceLine": [
+        {
+          "from": "e7",
+          "to": "e8"
+        }
+      ],
+      "opponentRepliesVerified": 0,
+      "positionsQueried": 2,
+      "hints": {
+        "4k4/3RpR3/4R4/9/9/9/9/9/9/4K4 w": [
+          {
+            "from": "e7",
+            "to": "e8"
+          }
+        ]
+      }
+    },
+    {
+      "id": "hunt-shotgun",
+      "configurations": [
+        {
+          "loadouts": [],
+          "solvable": true,
+          "minimumPlayerMoves": 1
+        }
+      ],
+      "referenceMinimumMoves": 1,
+      "referenceLine": [
+        {
+          "from": "c3",
+          "to": "d5"
+        }
+      ],
+      "opponentRepliesVerified": 0,
+      "positionsQueried": 1,
+      "hints": {
+        "4k4/9/9/4p4/R2m5/9/2U6/9/9/4K4 w": [
+          {
+            "from": "a5",
+            "to": "d5"
+          },
+          {
+            "from": "c3",
+            "to": "d5"
+          }
+        ]
+      }
+    },
+    {
+      "id": "knight-loadout",
+      "configurations": [
+        {
+          "loadouts": [],
+          "solvable": false,
+          "minimumPlayerMoves": null
+        },
+        {
+          "loadouts": [
+            {
+              "position": "c3",
+              "upgradeId": "TIAN_MA"
+            }
+          ],
+          "solvable": true,
+          "minimumPlayerMoves": 1
+        }
+      ],
+      "referenceMinimumMoves": 1,
+      "referenceLine": [
+        {
+          "from": "c3",
+          "to": "d5"
+        }
+      ],
+      "opponentRepliesVerified": 0,
+      "positionsQueried": 22,
+      "hints": {
+        "4k4/9/9/4p4/3m5/2P6/2U6/9/9/4K4 w": [
+          {
+            "from": "c3",
+            "to": "d5"
+          }
+        ]
+      }
+    },
+    {
+      "id": "elephant-cross",
+      "configurations": [
+        {
+          "loadouts": [],
+          "solvable": false,
+          "minimumPlayerMoves": null
+        },
+        {
+          "loadouts": [
+            {
+              "position": "c4",
+              "upgradeId": "FEI_XIANG"
+            }
+          ],
+          "solvable": true,
+          "minimumPlayerMoves": 1
+        }
+      ],
+      "referenceMinimumMoves": 1,
+      "referenceLine": [
+        {
+          "from": "c4",
+          "to": "a6"
+        }
+      ],
+      "opponentRepliesVerified": 0,
+      "positionsQueried": 12,
+      "hints": {
+        "4k4/9/9/p3p4/9/2F6/9/9/9/4K4 w": [
+          {
+            "from": "c4",
+            "to": "a6"
+          }
+        ]
+      }
+    },
+    {
+      "id": "shotgun-close",
+      "configurations": [
+        {
+          "loadouts": [],
+          "solvable": true,
+          "minimumPlayerMoves": 1
+        }
+      ],
+      "referenceMinimumMoves": 1,
+      "referenceLine": [
+        {
+          "from": "a2",
+          "to": "b2"
+        }
+      ],
+      "opponentRepliesVerified": 0,
+      "positionsQueried": 1,
+      "hints": {
+        "4k4/9/9/4p4/9/9/9/Mp7/9/4K4 w": [
+          {
+            "from": "a2",
+            "to": "b2"
+          }
+        ]
+      }
+    },
+    {
+      "id": "shotgun-screen",
+      "configurations": [
+        {
+          "loadouts": [],
+          "solvable": true,
+          "minimumPlayerMoves": 1
+        }
+      ],
+      "referenceMinimumMoves": 1,
+      "referenceLine": [
+        {
+          "from": "a2",
+          "to": "a6"
+        }
+      ],
+      "opponentRepliesVerified": 0,
+      "positionsQueried": 1,
+      "hints": {
+        "4k4/9/9/p3p4/9/P8/9/M8/9/4K4 w": [
+          {
+            "from": "a2",
+            "to": "a6"
+          }
+        ]
+      }
+    },
+    {
+      "id": "soldier-side",
+      "configurations": [
+        {
+          "loadouts": [],
+          "solvable": false,
+          "minimumPlayerMoves": null
+        },
+        {
+          "loadouts": [
+            {
+              "position": "c3",
+              "upgradeId": "TU_JI_BING"
+            }
+          ],
+          "solvable": true,
+          "minimumPlayerMoves": 1
+        }
+      ],
+      "referenceMinimumMoves": 1,
+      "referenceLine": [
+        {
+          "from": "c3",
+          "to": "d3"
+        }
+      ],
+      "opponentRepliesVerified": 0,
+      "positionsQueried": 10,
+      "hints": {
+        "4k4/9/9/4p4/9/9/2Sp5/9/9/4K4 w": [
+          {
+            "from": "c3",
+            "to": "d3"
+          }
+        ]
+      }
+    },
+    {
+      "id": "screen-team",
+      "configurations": [
+        {
+          "loadouts": [],
+          "solvable": true,
+          "minimumPlayerMoves": 2
+        }
+      ],
+      "referenceMinimumMoves": 2,
+      "referenceLine": [
+        {
+          "from": "b2",
+          "to": "a2"
+        },
+        {
+          "from": "a6",
+          "to": "a5"
+        },
+        {
+          "from": "a1",
+          "to": "a5"
+        }
+      ],
+      "opponentRepliesVerified": 2,
+      "positionsQueried": 38,
+      "hints": {
+        "5k3/9/9/9/p8/9/9/S8/C8/4K4 w": [
+          {
+            "from": "a1",
+            "to": "a5"
+          }
+        ],
+        "9/5k3/9/p8/9/9/9/S8/C8/4K4 w": [
+          {
+            "from": "a1",
+            "to": "a6"
+          }
+        ],
+        "5k3/9/9/p8/9/9/9/1S7/C8/4K4 w": [
+          {
+            "from": "b2",
+            "to": "a2"
+          }
+        ]
+      }
+    },
+    {
+      "id": "budget-choice",
+      "configurations": [
+        {
+          "loadouts": [],
+          "solvable": false,
+          "minimumPlayerMoves": null
+        },
+        {
+          "loadouts": [
+            {
+              "position": "c3",
+              "upgradeId": "TIAN_MA"
+            }
+          ],
+          "solvable": true,
+          "minimumPlayerMoves": 1
+        },
+        {
+          "loadouts": [
+            {
+              "position": "g0",
+              "upgradeId": "FEI_XIANG"
+            }
+          ],
+          "solvable": false,
+          "minimumPlayerMoves": null
+        }
+      ],
+      "referenceMinimumMoves": 1,
+      "referenceLine": [
+        {
+          "from": "c3",
+          "to": "d5"
+        }
+      ],
+      "opponentRepliesVerified": 0,
+      "positionsQueried": 51,
+      "hints": {
+        "4k4/9/9/4p4/3p5/2P6/2U6/9/9/4K1B2 w": [
+          {
+            "from": "c3",
+            "to": "d5"
+          }
+        ]
+      }
+    },
+    {
+      "id": "which-knight",
+      "configurations": [
+        {
+          "loadouts": [],
+          "solvable": false,
+          "minimumPlayerMoves": null
+        },
+        {
+          "loadouts": [
+            {
+              "position": "c3",
+              "upgradeId": "TIAN_MA"
+            }
+          ],
+          "solvable": true,
+          "minimumPlayerMoves": 1
+        },
+        {
+          "loadouts": [
+            {
+              "position": "g3",
+              "upgradeId": "TIAN_MA"
+            }
+          ],
+          "solvable": false,
+          "minimumPlayerMoves": null
+        }
+      ],
+      "referenceMinimumMoves": 1,
+      "referenceLine": [
+        {
+          "from": "c3",
+          "to": "d5"
+        }
+      ],
+      "opponentRepliesVerified": 0,
+      "positionsQueried": 75,
+      "hints": {
+        "4k4/9/9/4p4/3p5/2P3P2/2U3N2/9/9/4K4 w": [
+          {
+            "from": "c3",
+            "to": "d5"
+          }
+        ]
+      }
+    },
+    {
+      "id": "build-a-screen",
+      "configurations": [
+        {
+          "loadouts": [],
+          "solvable": false,
+          "minimumPlayerMoves": null
+        },
+        {
+          "loadouts": [
+            {
+              "position": "b2",
+              "upgradeId": "TU_JI_BING"
+            }
+          ],
+          "solvable": true,
+          "minimumPlayerMoves": 2
+        },
+        {
+          "loadouts": [
+            {
+              "position": "h0",
+              "upgradeId": "TIAN_MA"
+            }
+          ],
+          "solvable": false,
+          "minimumPlayerMoves": null
+        }
+      ],
+      "referenceMinimumMoves": 2,
+      "referenceLine": [
+        {
+          "from": "b2",
+          "to": "a2"
+        },
+        {
+          "from": "a6",
+          "to": "a5"
+        },
+        {
+          "from": "a1",
+          "to": "a5"
+        }
+      ],
+      "opponentRepliesVerified": 2,
+      "positionsQueried": 830,
+      "hints": {
+        "5k3/9/9/9/p8/9/9/S8/C8/4K2N1 w": [
+          {
+            "from": "a1",
+            "to": "a5"
+          }
+        ],
+        "9/5k3/9/p8/9/9/9/S8/C8/4K2N1 w": [
+          {
+            "from": "a1",
+            "to": "a6"
+          }
+        ],
+        "5k3/9/9/p8/9/9/9/1S7/C8/4K2N1 w": [
+          {
+            "from": "b2",
+            "to": "a2"
+          }
+        ]
+      }
+    },
+    {
+      "id": "palace-finale",
+      "configurations": [
+        {
+          "loadouts": [],
+          "solvable": true,
+          "minimumPlayerMoves": 2
+        }
+      ],
+      "referenceMinimumMoves": 2,
+      "referenceLine": [
+        {
+          "from": "c7",
+          "to": "d7"
+        },
+        {
+          "from": "a6",
+          "to": "a5"
+        },
+        {
+          "from": "d7",
+          "to": "e7"
+        }
+      ],
+      "opponentRepliesVerified": 1,
+      "positionsQueried": 58,
+      "hints": {
+        "4k4/1N5N1/3S2N2/4C4/p8/9/9/9/9/4K4 w": [
+          {
+            "from": "d7",
+            "to": "e7"
+          }
+        ],
+        "4k4/1N5N1/2S3N2/p3C4/9/9/9/9/9/4K4 w": [
+          {
+            "from": "c7",
+            "to": "d7"
+          }
+        ]
+      }
+    }
+  ]
+}

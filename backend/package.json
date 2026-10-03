@@ -4,9 +4,12 @@
   "description": "Variant Xiangqi WebSocket Backend using Fairy-Stockfish Largeboard",
   "type": "module",
   "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test src/tests/*.test.ts",
     "dev": "tsx watch src/server.ts",
     "start": "tsx src/server.ts",
     "test:engine": "tsx src/test-engine.ts",
+    "verify:challenges": "tsx src/verify-challenges.ts",
     "test:client": "tsx src/test-client.ts",
     "simulate": "tsx src/simulator.ts"
   },

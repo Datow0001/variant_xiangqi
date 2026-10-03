@@ -20,6 +20,14 @@
    * 變體棋子設計三大鐵律（開局首步零盲狙）、三大自對弈測試情境與 4 大過強量化警戒紅線。
 5. **[變體引擎設定檔 (variants.ini)](./variants.ini)**：
    * 供 Fairy-Stockfish 讀取之 Betza 記譜法實體設定檔。
+6. **[遊戲基礎實作與協定 (GAME_FOUNDATION.md)](./GAME_FOUNDATION.md)**：
+   * 第一階段的執行方式、驗證規則、指定盤面、恢復憑證、生命週期、測試及部署限制；目前協定以此文件和 `shared/types.ts` 為準。
+7. **[短局挑戰系統 (CHALLENGES.md)](./CHALLENGES.md)**：
+   * 第二階段的三個示範關卡、限步目標、提示與星級、結果／重試、關卡資料格式與協定增量。
+8. **[第一批正式關卡 (FIRST_CHALLENGES.md)](./FIRST_CHALLENGES.md)**：
+   * 12 關、3 章的設計表、引擎防守分支驗證、本機最佳成績與進度保存。
+9. **[手機體驗與進度保存 (MOBILE_EXPERIENCE.md)](./MOBILE_EXPERIENCE.md)**：
+   * 手機排版、操作確認、schema 2 移轉、配點保存、備份合併與前景恢復，以及實機驗收清單。
 
 ---
 

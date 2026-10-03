@@ -4,11 +4,14 @@
   "description": "Variant Xiangqi MVP - Full Stack TypeScript",
   "private": true,
   "scripts": {
+    "test": "npm run test --prefix backend",
+    "typecheck:backend": "npm run typecheck --prefix backend",
     "dev:backend": "npm run dev --prefix backend",
     "dev:frontend": "npm run dev --prefix frontend",
     "start": "npm run start --prefix backend",
     "install:all": "npm install --prefix backend && npm install --prefix frontend",
     "test:engine": "npm run test:engine --prefix backend",
+    "verify:challenges": "npm run verify:challenges --prefix backend --",
     "test:client": "npm run test:client --prefix backend",
     "simulate": "npm run simulate --prefix backend",
     "build:frontend": "npm run build --prefix frontend"
