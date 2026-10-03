@@ -1,5 +1,7 @@
 # 第二階段：短局挑戰系統
 
+目前目錄為 20 關、5 章：第 1～3 章保留 12 關教學篇，第 4～5 章新增 8 關多步挑戰。新增關卡設計與驗證見 [ADVANCED_CHALLENGES.md](./ADVANCED_CHALLENGES.md)。以下保留原階段的系統說明。
+
 第二階段先提供三個示範關卡，第三階段已擴充為 12 關、3 章，加入本機最佳成績與進度。完整內容與驗證方式見 [FIRST_CHALLENGES.md](./FIRST_CHALLENGES.md)。完整對局的 PVE／PVP 仍保留。首頁「短局挑戰」進入選關；第三關可在開始前升級 c3 的馬。執行方式沿用 GAME_FOUNDATION.md：`npm run build:frontend` 後 `npm run start`，開啟 http://localhost:8080。
 
 ## 已實作規則

@@ -79,6 +79,21 @@ test('local progress survives serialization and lower scores never replace the b
   assert.deepEqual(parseProgress(JSON.stringify(progress)), progress);
   recordAchievement(progress, definition, 0); assert.equal(progress.records[definition.id].bestStars, 3);
 });
+
+test('adding advanced chapters preserves all tutorial achievements and can save new results', () => {
+  const tutorial = catalogue.filter(item => item.chapter <= 3);
+  const progress = emptyProgress();
+  for (const definition of tutorial) recordAchievement(progress, definition, 3);
+  progress.lastChallengeId = tutorial[11].id;
+  const restored = importProgress(exportProgress(progress), emptyProgress(), catalogue);
+  assert.equal(Object.keys(restored.records).length, 12);
+  for (const definition of tutorial) assert.equal(restored.records[definition.id].bestStars, 3);
+  const advanced = catalogue.find(item => item.id === 'four-move-siege')!;
+  assert.equal(restored.records[advanced.id], undefined);
+  recordAchievement(restored, advanced, 2);
+  assert.equal(parseProgress(exportProgress(restored)).records[advanced.id].bestStars, 2);
+  assert.equal(Object.keys(restored.records).length, 13);
+});
 test('content changes and removed levels invalidate incompatible achievements and last-played ids', () => {
   const progress = emptyProgress(); const definition = publicChallenge(CHALLENGES[0]);
   recordAchievement(progress, definition, 3); progress.lastChallengeId = definition.id;

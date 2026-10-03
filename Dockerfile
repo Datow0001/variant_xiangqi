@@ -25,7 +25,7 @@ COPY scripts/ ./scripts/
 COPY cloudbuild.yaml Dockerfile .dockerignore ./
 ENV ENGINE_PATH=/app/engine/fairy-stockfish-largeboard_x86-64 \
     VARIANT_PATH=/app/variants.ini
-# The default runtime target depends on all Linux tests and the 12-level proof.
+# The default runtime target depends on all Linux tests and the full catalogue proof.
 RUN npm run typecheck:backend && npm run build:frontend \
     && npm test && npm run test:deployment && npm run verify:challenges
 

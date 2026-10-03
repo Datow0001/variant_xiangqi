@@ -92,7 +92,8 @@ export async function smokeDeployment(base: string, expectedVersion?: string) {
     const first = await connect(); const catalogue = await first.request('LIST_CHALLENGES', {});
     assert.equal(catalogue.event, 'CHALLENGE_LIST');
     if (catalogue.event !== 'CHALLENGE_LIST') throw new Error('Missing catalogue');
-    assert.equal(catalogue.payload.length, 12);
+    assert.equal(catalogue.payload.length, 20);
+    assert.equal(catalogue.payload.filter(item => item.chapter >= 4).length, 8);
     const started = game(await first.request('START_GAME', { gameMode: 'CHALLENGE', challengeId: 'rook-mate' }));
     const hint = await first.request('REQUEST_HINT', { gameId: started.state.gameId, level: 'DIRECTION', expectedVersion: 0 });
     assert.equal(hint.event, 'CHALLENGE_HINT');
@@ -110,7 +111,17 @@ export async function smokeDeployment(base: string, expectedVersion?: string) {
     assert.equal(ai.version, 2); assert.equal(ai.status, 'READY');
     const ended = state(await recovered.request('RESIGN', { gameId: ai.gameId }));
     assert.equal(ended.status, 'FINISHED');
-    return { status: 'passed', version: health.version, checks: ['health', 'frontend-asset', '12-level-catalogue', 'hint', 'reconnect', 'challenge-settlement', 'upgrade', 'pve-ai', 'resign'] };
+    let advanced = game(await recovered.request('START_GAME', { gameMode: 'CHALLENGE', challengeId: 'four-move-siege' })).state;
+    for (let moveNumber = 0; moveNumber < 4 && advanced.challenge?.outcome === 'ACTIVE'; moveNumber++) {
+      const hint = await recovered.request('REQUEST_HINT', { gameId: advanced.gameId, level: 'MOVE', expectedVersion: advanced.version });
+      assert.equal(hint.event, 'CHALLENGE_HINT');
+      if (hint.event !== 'CHALLENGE_HINT' || !hint.payload.available || !hint.payload.hint.move) throw new Error('Advanced challenge verified hint missing');
+      const { from, to } = hint.payload.hint.move;
+      advanced = state(await recovered.request('MAKE_MOVE', { gameId: advanced.gameId, from, to, expectedVersion: advanced.version }));
+    }
+    assert.equal(advanced.challenge?.outcome, 'SUCCEEDED', 'Advanced challenge must complete within four moves');
+    assert.equal(advanced.challenge.stars, 1);
+    return { status: 'passed', version: health.version, checks: ['health', 'frontend-asset', '20-level-catalogue', 'hint', 'reconnect', 'challenge-settlement', 'upgrade', 'pve-ai', 'resign', 'advanced-challenge'] };
   } finally { await Promise.all(clients.map(client => client.dispose())); }
 }
 

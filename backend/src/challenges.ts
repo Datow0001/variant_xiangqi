@@ -4,12 +4,13 @@ import { isValidUci, uciToPos } from '../../shared/coordinates';
 import { basics } from './challenges/basics';
 import { tactics } from './challenges/tactics';
 import { construction } from './challenges/construction';
+import { advanced } from './challenges/advanced';
 import { ChallengeDefinition, positionKey } from './challenges/model';
 import { verifiedHints } from './challenges/verified-hints';
 export type { ChallengeDefinition } from './challenges/model';
 export { positionKey } from './challenges/model';
 
-export const CHALLENGES: readonly ChallengeDefinition[] = [...basics, ...tactics, ...construction].map((definition, index, all) => ({
+export const CHALLENGES: readonly ChallengeDefinition[] = [...basics, ...tactics, ...construction, ...advanced].map((definition, index, all) => ({
   ...definition,
   nextChallengeId: all[index + 1]?.id ?? null,
   hintBranches: verifiedHints[definition.id] ?? { [positionKey(applyLoadoutsToFen(definition.initialFen, definition.referenceLoadouts, definition.playerColor))]: definition.preferredMoves },
@@ -21,7 +22,7 @@ export function validateChallengeDefinition(definition: ChallengeDefinition): vo
       !Number.isSafeInteger(definition.budget) || definition.budget < 0 || definition.budget > 10 ||
       !Number.isInteger(definition.movetimeMs) || definition.movetimeMs < 1 || definition.movetimeMs > 10000) throw new Error('Invalid challenge definition');
   if (!['CHECKMATE', 'CAPTURE'].includes(definition.goal.type) || !Number.isSafeInteger(definition.order) || definition.order < 1 || !definition.name || !definition.goalText || !definition.directionHint ||
-      ![1, 2, 3].includes(definition.chapter) || !['入門', '進階', '綜合'].includes(definition.difficulty) ||
+      ![1, 2, 3, 4, 5].includes(definition.chapter) || !['入門', '進階', '綜合', '挑戰', '高手'].includes(definition.difficulty) ||
       !Number.isSafeInteger(definition.contentVersion) || definition.contentVersion < 1 || !definition.learningPoint || !definition.commonMistake || !definition.completionExplanation ||
       !Array.isArray(definition.themes) || !definition.themes.length || definition.themes.some(theme => typeof theme !== 'string' || !theme)) throw new Error('Invalid challenge metadata');
   const originals = { TIAN_MA: 'n', FEI_XIANG: 'b', PO_JI_PAO: 'c', TU_JI_BING: 'p' };

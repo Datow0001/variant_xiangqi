@@ -62,8 +62,8 @@ export interface Move {
 export type GameMode = 'PVE' | 'PVP' | 'CHALLENGE';
 
 export interface ChallengeSummary {
-  chapter: 1 | 2 | 3;
-  difficulty: '入門' | '進階' | '綜合';
+  chapter: 1 | 2 | 3 | 4 | 5;
+  difficulty: '入門' | '進階' | '綜合' | '挑戰' | '高手';
   themes: string[];
   learningPoint: string;
   contentVersion: number;

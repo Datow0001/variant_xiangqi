@@ -56,7 +56,7 @@ test('challenge catalogue, hint deduplication across reconnect, terminal recover
     const owner = await h.connect();
     const catalogue = await owner.request('LIST_CHALLENGES', {});
     assert.equal(catalogue.event, 'CHALLENGE_LIST');
-    if (catalogue.event === 'CHALLENGE_LIST') { assert.equal(catalogue.payload.length, 12); assert.equal('hintBranches' in catalogue.payload[0], false); assert.equal('referenceLoadouts' in catalogue.payload[0], false); }
+    if (catalogue.event === 'CHALLENGE_LIST') { assert.equal(catalogue.payload.length, 20); assert.equal('hintBranches' in catalogue.payload[0], false); assert.equal('referenceLoadouts' in catalogue.payload[0], false); }
     const game = started(await owner.request('START_GAME', { gameMode: 'CHALLENGE', challengeId: 'rook-mate' }));
     const hintPayload = { gameId: game.state.gameId, level: 'DIRECTION', expectedVersion: 0 }; const hintId = randomUUID();
     const hint = await owner.request('REQUEST_HINT', hintPayload, hintId);

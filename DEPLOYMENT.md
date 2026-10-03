@@ -38,7 +38,7 @@ Dockerfile 使用 Node 24、Debian bookworm、Linux amd64；前後端都用 `npm
 
 引擎固定官方 `fairy_sf_14` 的 `fairy-stockfish-largeboard_x86-64`，由官方資產下載後以 `deployment/engine.sha256` 比對。本次實際下載計算的 SHA-256 為 `41b8b4d539adfd9924929ee4a948d1a37dd1e9beaa535a811cb5e7fee9e4cb99`，檔案 2,527,680 bytes。這是固定資產完整性核對，不是上游簽章驗證。更新引擎時重新取得校驗值並驗證全部關卡。
 
-預設 Docker runtime target 必須先完成 Linux 型別檢查、前端建置、完整測試及全部 12 關策略驗證。最終 runtime 以非 root 的 node 使用者執行，建置時再啟動短暫伺服器，檢查健康版本、前端 JS、WebSocket、提示、重連、將殺、天馬升級及 PVE AI。任一步失敗便無法完成映像與部署。Node 基底以 LTS／作業系統標籤指定，尚未鎖定映像 digest；實際建置映像 digest 應隨發布記錄保留。
+預設 Docker runtime target 必須先完成 Linux 型別檢查、前端建置、完整測試及全部 20 關策略驗證。最終 runtime 以非 root 的 node 使用者執行，建置時再啟動短暫伺服器，檢查健康版本、前端 JS、WebSocket、提示、重連、將殺、天馬升級及 PVE AI。任一步失敗便無法完成映像與部署。Node 基底以 LTS／作業系統標籤指定，尚未鎖定映像 digest；實際建置映像 digest 應隨發布記錄保留。
 
 正式對外 `/api/health` 回傳 status 與 APP_VERSION，沒有憑證或環境設定；它只證明 HTTP 程序存活。引擎功能必須由驗收腳本確認。預覽驗收會使用少量真實引擎，結束後送出 LEAVE_GAME；若中途失聯，資源由既有逾時機制清理。
 

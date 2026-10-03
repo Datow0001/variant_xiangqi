@@ -7,9 +7,9 @@ import { applyLoadoutsToFen, validateInitialFen } from '../../../shared/fen';
 import { GameSession } from '../session';
 import { normalizeStart } from '../validation';
 
-test('first release has 12 linked levels, 3 chapters, and no private answers in summaries', () => {
-  assert.equal(CHALLENGES.length, 12);
-  for (const chapter of [1, 2, 3]) assert.equal(CHALLENGES.filter(item => item.chapter === chapter).length, 4);
+test('catalogue has 20 linked levels, 5 chapters, and no private answers in summaries', () => {
+  assert.equal(CHALLENGES.length, 20);
+  for (const chapter of [1, 2, 3, 4, 5]) assert.equal(CHALLENGES.filter(item => item.chapter === chapter).length, 4);
   for (const [index, definition] of CHALLENGES.entries()) {
     assert.equal(definition.nextChallengeId, CHALLENGES[index + 1]?.id ?? null);
     const summary = publicChallenge(definition);
@@ -22,7 +22,7 @@ test('first release has 12 linked levels, 3 chapters, and no private answers in 
   assert.equal(getChallenge('palace-finale')!.contentVersion, 2);
 });
 
-test('real engine proves all 12 levels and all defensive branches; shipped hints preserve a forced solution', async () => {
+test('real engine proves every level and all defensive branches; advanced levels require 3 or 4 moves', async () => {
   const engine = new FairyEngine();
   try {
     await engine.waitReady();
@@ -30,6 +30,13 @@ test('real engine proves all 12 levels and all defensive branches; shipped hints
       const result = await verifyChallenge(definition, engine);
       await verifyHints(definition, result.hints);
       assert.ok(result.referenceMinimumMoves <= definition.maxPlayerMoves);
+      if (definition.chapter >= 4) {
+        assert.equal(result.referenceMinimumMoves, definition.maxPlayerMoves, definition.id);
+        assert.ok(result.referenceMinimumMoves >= 3, definition.id);
+        assert.ok(result.opponentRepliesVerified >= 3, definition.id);
+        const hintMoves = Object.values(result.hints).map(moves => JSON.stringify(moves));
+        assert.ok(new Set(hintMoves).size >= 3, `${definition.id}: must adapt moves along the strategy`);
+      }
       if (['screen-team', 'build-a-screen', 'palace-finale'].includes(definition.id)) {
         assert.equal(result.referenceMinimumMoves, 2); assert.ok(result.opponentRepliesVerified > 0);
       }

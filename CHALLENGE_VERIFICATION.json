@@ -474,6 +474,588 @@
           }
         ]
       }
+    },
+    {
+      "id": "back-rank-net",
+      "configurations": [
+        {
+          "loadouts": [],
+          "solvable": true,
+          "minimumPlayerMoves": 3
+        }
+      ],
+      "referenceMinimumMoves": 3,
+      "referenceLine": [
+        {
+          "from": "b6",
+          "to": "b9"
+        },
+        {
+          "from": "e8",
+          "to": "d9"
+        },
+        {
+          "from": "g9",
+          "to": "f9"
+        },
+        {
+          "from": "e9",
+          "to": "e8"
+        },
+        {
+          "from": "b9",
+          "to": "b8"
+        }
+      ],
+      "opponentRepliesVerified": 3,
+      "positionsQueried": 425,
+      "hints": {
+        "1R1a1P3/4k4/9/6N2/rC7/4P4/9/9/9/4K4 w": [
+          {
+            "from": "b9",
+            "to": "b8"
+          }
+        ],
+        "1R1a1k3/9/9/6N2/rC7/4P4/9/9/9/4K4 w": [
+          {
+            "from": "b9",
+            "to": "d9"
+          }
+        ],
+        "1R1ak1P2/9/9/6N2/rC7/4P4/9/9/9/4K4 w": [
+          {
+            "from": "g9",
+            "to": "f9"
+          }
+        ],
+        "4k1P2/4a4/9/1R4N2/rC7/4P4/9/9/9/4K4 w": [
+          {
+            "from": "b6",
+            "to": "b9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "initiative-race",
+      "configurations": [
+        {
+          "loadouts": [],
+          "solvable": true,
+          "minimumPlayerMoves": 3
+        }
+      ],
+      "referenceMinimumMoves": 3,
+      "referenceLine": [
+        {
+          "from": "b7",
+          "to": "b6"
+        },
+        {
+          "from": "e9",
+          "to": "d9"
+        },
+        {
+          "from": "b6",
+          "to": "c6"
+        },
+        {
+          "from": "d9",
+          "to": "d8"
+        },
+        {
+          "from": "c6",
+          "to": "d6"
+        }
+      ],
+      "opponentRepliesVerified": 3,
+      "positionsQueried": 376,
+      "hints": {
+        "1P3C3/3k5/6N2/2R6/9/4P4/9/9/9/4K4 w": [
+          {
+            "from": "c6",
+            "to": "d6"
+          }
+        ],
+        "1P2kC3/9/6N2/2R6/9/4P4/9/9/9/4K4 w": [
+          {
+            "from": "c6",
+            "to": "c9"
+          }
+        ],
+        "1P1k1C3/9/6N2/1R7/9/4P4/9/9/9/4K4 w": [
+          {
+            "from": "b6",
+            "to": "c6"
+          }
+        ],
+        "1P2kC3/9/1R4N2/1r7/9/4P4/9/9/9/4K4 w": [
+          {
+            "from": "b7",
+            "to": "b6"
+          }
+        ]
+      }
+    },
+    {
+      "id": "elephant-interlock",
+      "configurations": [
+        {
+          "loadouts": [],
+          "solvable": true,
+          "minimumPlayerMoves": 3
+        }
+      ],
+      "referenceMinimumMoves": 3,
+      "referenceLine": [
+        {
+          "from": "i9",
+          "to": "g7"
+        },
+        {
+          "from": "e9",
+          "to": "e8"
+        },
+        {
+          "from": "b7",
+          "to": "b8"
+        }
+      ],
+      "opponentRepliesVerified": 5,
+      "positionsQueried": 1996,
+      "hints": {
+        "3N5/4k4/1R2CaF2/p8/9/4P4/9/9/9/4K4 w": [
+          {
+            "from": "b7",
+            "to": "b8"
+          }
+        ],
+        "3k5/9/1R2CaF2/p8/9/4P4/9/9/9/4K4 w": [
+          {
+            "from": "b7",
+            "to": "d7"
+          }
+        ],
+        "3N1k3/4a4/1RC3F2/p8/9/4P4/9/9/9/4K4 w": [
+          {
+            "from": "c7",
+            "to": "c9"
+          }
+        ],
+        "3N1k3/9/1RC2aF2/9/p8/4P4/9/9/9/4K4 w": [
+          {
+            "from": "c7",
+            "to": "c9"
+          }
+        ],
+        "3N1k3/9/1R2CaF2/p8/9/4P4/9/9/9/4K4 w": [
+          {
+            "from": "e7",
+            "to": "c7"
+          }
+        ],
+        "3Nk3F/9/1R2Ca3/p8/9/4P4/9/9/9/4K4 w": [
+          {
+            "from": "i9",
+            "to": "g7"
+          }
+        ]
+      }
+    },
+    {
+      "id": "cannon-crossfire",
+      "configurations": [
+        {
+          "loadouts": [],
+          "solvable": true,
+          "minimumPlayerMoves": 3
+        }
+      ],
+      "referenceMinimumMoves": 3,
+      "referenceLine": [
+        {
+          "from": "a5",
+          "to": "e5"
+        },
+        {
+          "from": "e9",
+          "to": "f9"
+        },
+        {
+          "from": "g7",
+          "to": "f7"
+        },
+        {
+          "from": "a6",
+          "to": "a5"
+        },
+        {
+          "from": "b6",
+          "to": "f6"
+        }
+      ],
+      "opponentRepliesVerified": 6,
+      "positionsQueried": 4402,
+      "hints": {
+        "5k3/9/5C3/1M7/p3R4/4P4/9/9/9/4K4 w": [
+          {
+            "from": "b6",
+            "to": "f6"
+          }
+        ],
+        "9/5k3/5C3/pM7/4R4/4P4/9/9/9/4K4 w": [
+          {
+            "from": "b6",
+            "to": "f6"
+          }
+        ],
+        "5k3/9/6C2/pM7/4R4/4P4/9/9/9/4K4 w": [
+          {
+            "from": "g7",
+            "to": "f7"
+          }
+        ],
+        "3k5/9/3C5/1M7/p3R4/4P4/9/9/9/4K4 w": [
+          {
+            "from": "b6",
+            "to": "d6"
+          }
+        ],
+        "9/3k5/3C5/pM7/4R4/4P4/9/9/9/4K4 w": [
+          {
+            "from": "b6",
+            "to": "d6"
+          }
+        ],
+        "3k5/9/6C2/pM7/4R4/4P4/9/9/9/4K4 w": [
+          {
+            "from": "g7",
+            "to": "d7"
+          }
+        ],
+        "4k4/9/6C2/pM7/R8/4P4/9/9/9/4K4 w": [
+          {
+            "from": "a5",
+            "to": "e5"
+          }
+        ]
+      }
+    },
+    {
+      "id": "knight-cannon-weave",
+      "configurations": [
+        {
+          "loadouts": [],
+          "solvable": true,
+          "minimumPlayerMoves": 3
+        }
+      ],
+      "referenceMinimumMoves": 3,
+      "referenceLine": [
+        {
+          "from": "d5",
+          "to": "d8"
+        },
+        {
+          "from": "f9",
+          "to": "e8"
+        },
+        {
+          "from": "g6",
+          "to": "e5"
+        },
+        {
+          "from": "e8",
+          "to": "d7"
+        },
+        {
+          "from": "i5",
+          "to": "i9"
+        }
+      ],
+      "opponentRepliesVerified": 6,
+      "positionsQueried": 1826,
+      "hints": {
+        "4k4/3M5/3a5/9/4U3R/4P4/9/9/9/4K4 w": [
+          {
+            "from": "i5",
+            "to": "i9"
+          }
+        ],
+        "4k4/3M5/5a3/9/4U3R/4P4/9/9/9/4K4 w": [
+          {
+            "from": "i5",
+            "to": "i9"
+          }
+        ],
+        "3ak4/3M5/9/9/4U3R/4P4/9/9/9/4K4 w": [
+          {
+            "from": "i5",
+            "to": "i9"
+          }
+        ],
+        "4ka3/3M5/9/9/4U3R/4P4/9/9/9/4K4 w": [
+          {
+            "from": "e5",
+            "to": "d7"
+          }
+        ],
+        "5k3/3Ma4/9/9/4U3R/4P4/9/9/9/4K4 w": [
+          {
+            "from": "i5",
+            "to": "i9"
+          }
+        ],
+        "4k4/3Ma4/9/6U2/8R/4P4/9/9/9/4K4 w": [
+          {
+            "from": "g6",
+            "to": "e5"
+          }
+        ],
+        "4ka3/9/9/6U2/3M4R/4P4/9/9/9/4K4 w": [
+          {
+            "from": "d5",
+            "to": "d8"
+          }
+        ]
+      }
+    },
+    {
+      "id": "quiet-knight-entry",
+      "configurations": [
+        {
+          "loadouts": [],
+          "solvable": true,
+          "minimumPlayerMoves": 3
+        }
+      ],
+      "referenceMinimumMoves": 3,
+      "referenceLine": [
+        {
+          "from": "a9",
+          "to": "c8"
+        },
+        {
+          "from": "e9",
+          "to": "f9"
+        },
+        {
+          "from": "a7",
+          "to": "a6"
+        },
+        {
+          "from": "e8",
+          "to": "d7"
+        },
+        {
+          "from": "a6",
+          "to": "f6"
+        }
+      ],
+      "opponentRepliesVerified": 9,
+      "positionsQueried": 2128,
+      "hints": {
+        "5k3/2N3S2/1C1a5/R8/9/4P4/9/9/9/4K4 w": [
+          {
+            "from": "a6",
+            "to": "f6"
+          }
+        ],
+        "5k3/2N3S2/1C3a3/R8/9/4P4/9/9/9/4K4 w": [
+          {
+            "from": "a6",
+            "to": "a9"
+          }
+        ],
+        "3a1k3/2N3S2/1C7/R8/9/4P4/9/9/9/4K4 w": [
+          {
+            "from": "a6",
+            "to": "f6"
+          }
+        ],
+        "5k3/2N1a1S2/RC7/p8/9/4P4/9/9/9/4K4 w": [
+          {
+            "from": "a7",
+            "to": "a6"
+          }
+        ],
+        "3k5/1CN3S2/R2a5/p8/9/4P4/9/9/9/4K4 w": [
+          {
+            "from": "a7",
+            "to": "d7"
+          }
+        ],
+        "3k5/1CN3S2/R4a3/p8/9/4P4/9/9/9/4K4 w": [
+          {
+            "from": "a7",
+            "to": "d7"
+          }
+        ],
+        "3k1a3/1CN3S2/R8/p8/9/4P4/9/9/9/4K4 w": [
+          {
+            "from": "a7",
+            "to": "d7"
+          }
+        ],
+        "3k5/1CN1a1S2/R8/9/p8/4P4/9/9/9/4K4 w": [
+          {
+            "from": "a7",
+            "to": "a9"
+          }
+        ],
+        "3k5/2N1a1S2/RC7/p8/9/4P4/9/9/9/4K4 w": [
+          {
+            "from": "b7",
+            "to": "b8"
+          }
+        ],
+        "N3k4/4a1S2/RC7/p8/9/4P4/9/9/9/4K4 w": [
+          {
+            "from": "a9",
+            "to": "c8"
+          }
+        ]
+      }
+    },
+    {
+      "id": "four-move-siege",
+      "configurations": [
+        {
+          "loadouts": [],
+          "solvable": true,
+          "minimumPlayerMoves": 4
+        }
+      ],
+      "referenceMinimumMoves": 4,
+      "referenceLine": [
+        {
+          "from": "c6",
+          "to": "c9"
+        },
+        {
+          "from": "e9",
+          "to": "e8"
+        },
+        {
+          "from": "g7",
+          "to": "f7"
+        },
+        {
+          "from": "e8",
+          "to": "d8"
+        },
+        {
+          "from": "f7",
+          "to": "e7"
+        },
+        {
+          "from": "d7",
+          "to": "e8"
+        },
+        {
+          "from": "a5",
+          "to": "c6"
+        }
+      ],
+      "opponentRepliesVerified": 4,
+      "positionsQueried": 7186,
+      "hints": {
+        "2R2a3/3ka4/4S4/9/N8/4P4/9/9/9/4K4 w": [
+          {
+            "from": "a5",
+            "to": "c6"
+          }
+        ],
+        "2R6/3ka4/3aS4/9/N8/4P4/9/9/9/4K4 w": [
+          {
+            "from": "a5",
+            "to": "c6"
+          }
+        ],
+        "2R2a3/3k5/3a1S3/9/N8/4P4/9/9/9/4K4 w": [
+          {
+            "from": "f7",
+            "to": "e7"
+          }
+        ],
+        "2R2a3/4k4/3a2S2/9/N8/4P4/9/9/9/4K4 w": [
+          {
+            "from": "g7",
+            "to": "f7"
+          }
+        ],
+        "4ka3/9/3a2S2/2R6/N8/4P4/9/9/9/4K4 w": [
+          {
+            "from": "c6",
+            "to": "c9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "knight-return-net",
+      "configurations": [
+        {
+          "loadouts": [],
+          "solvable": true,
+          "minimumPlayerMoves": 4
+        }
+      ],
+      "referenceMinimumMoves": 4,
+      "referenceLine": [
+        {
+          "from": "d9",
+          "to": "c7"
+        },
+        {
+          "from": "c6",
+          "to": "c5"
+        },
+        {
+          "from": "b5",
+          "to": "b9"
+        }
+      ],
+      "opponentRepliesVerified": 5,
+      "positionsQueried": 29026,
+      "hints": {
+        "4k4/9/2U6/9/1Rp5C/4P4/9/9/9/4K4 w": [
+          {
+            "from": "b5",
+            "to": "b9"
+          }
+        ],
+        "1R7/9/5k3/2p1U4/8C/4P4/9/9/9/4K4 w": [
+          {
+            "from": "b9",
+            "to": "b7"
+          }
+        ],
+        "1R7/4k4/9/2p1U4/8C/4P4/9/9/9/4K4 w": [
+          {
+            "from": "i5",
+            "to": "e5"
+          }
+        ],
+        "1R7/5k3/2U6/2p6/8C/4P4/9/9/9/4K4 w": [
+          {
+            "from": "c7",
+            "to": "e6"
+          }
+        ],
+        "5k3/9/2U6/2p6/1R6C/4P4/9/9/9/4K4 w": [
+          {
+            "from": "b5",
+            "to": "b9"
+          }
+        ],
+        "3Uk4/9/9/2p6/1R6C/4P4/9/9/9/4K4 w": [
+          {
+            "from": "d9",
+            "to": "c7"
+          }
+        ]
+      }
     }
   ]
 }

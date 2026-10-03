@@ -8,6 +8,8 @@ const chapters = [
   { id: 1, name: '基礎入門', description: '認識目標、將殺與變體棋子的能力。' },
   { id: 2, name: '變體戰術', description: '練習近戰、炮架與兩步配合。' },
   { id: 3, name: '構築挑戰', description: '選擇升級位置與預算用途，完成綜合題。' },
+  { id: 4, name: '戰術挑戰', description: '三步推演，找出不同防守下的接續攻勢。' },
+  { id: 5, name: '高手推演', description: '三至四步將殺，計算轉位、封路與多種回應。' },
 ] as const;
 const chapter = ref(1);
 const configuration = ref<HTMLElement | null>(null);
@@ -27,8 +29,8 @@ function selectChapter(id: number) {
 <template>
   <section class="max-w-4xl w-full mx-auto px-4 py-8">
     <button class="text-slate-400 mb-6" @click="store.requestConfirmation('LEAVE')">← 返回首頁</button>
-    <h1 class="text-3xl font-black text-amber-400">短局挑戰 · 第一輯</h1>
-    <p class="mt-3 text-slate-400">找出關鍵一步，練習變體棋子的戰術。步數只計算玩家出步。</p>
+    <h1 class="text-3xl font-black text-amber-400">短局挑戰</h1>
+    <p class="mt-3 text-slate-400">第 1～3 章為教學篇，第 4～5 章挑戰多步推演。步數只計算玩家出步。</p>
     <div class="flex flex-wrap items-center gap-4 mt-5 text-sm">
       <span class="text-emerald-300">已通關 {{ store.completedChallenges }} / {{ store.challenges.length }} 關</span>
       <span class="text-amber-300">★ {{ store.totalStars }} / {{ store.challenges.length * 3 }}</span>

@@ -32,6 +32,8 @@
     * 既有服務、Cloud Build 首次切換、無流量預覽、容器驗證、明確版本發布與回復。
 11. **[玩家測試與實機驗收 (PLAYER_TESTING.md)](./PLAYER_TESTING.md)**：
     * Android／iPhone 驗收表、容量量測、兩輪試玩與問題回報格式。
+12. **[多步推演關卡 (ADVANCED_CHALLENGES.md)](./ADVANCED_CHALLENGES.md)**：
+    * 新增 8 關、共 20 關與 5 章；三至四步將殺、多種防守分支、難度驗證與試玩重點。
 
 ---
 
