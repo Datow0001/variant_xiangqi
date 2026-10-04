@@ -1,7 +1,8 @@
 import { Engine } from '../FairyEngine';
 import { ChallengeDefinition, positionKey } from './model';
-import { LoadoutItem, Move } from '../../../shared/types';
-import { applyLoadoutsToFen, applyMoveToFen, validateInitialFen } from '../../../shared/fen';
+import { LoadoutItem, Move, UPGRADES } from '../../../shared/types';
+import { applyLoadoutsToFen, applyMoveToFen, validateInitialFen, fenToBoard, boardToFen } from '../../../shared/fen';
+import { uciToPos } from '../../../shared/coordinates';
 
 interface Proof { hints: Record<string, Move[]>; replies: number; line: Move[] }
 export interface VerificationResult {
@@ -12,6 +13,7 @@ export interface VerificationResult {
   opponentRepliesVerified: number;
   positionsQueried: number;
   hints: Record<string, Move[]>;
+  requiredAbilityChecks?: { position: string; upgradeId: LoadoutItem['upgradeId']; ordinarySolvable: boolean; positionsQueried: number }[];
 }
 export function configurations(definition: ChallengeDefinition): LoadoutItem[][] {
   const values: LoadoutItem[][] = [[]];
@@ -24,7 +26,7 @@ export function configurations(definition: ChallengeDefinition): LoadoutItem[][]
 }
 
 /** Construct a strategy against EVERY legal opponent reply, without relying on AI search choices. */
-export async function verifyChallenge(definition: ChallengeDefinition, engine: Engine, maxPositions = 30000): Promise<VerificationResult> {
+export async function verifyChallenge(definition: ChallengeDefinition, engine: Engine, maxPositions = 100000): Promise<VerificationResult> {
   const legalCache = new Map<string, Move[]>();
   const memo = new Map<string, Proof | null>();
   const playerTurn = definition.playerColor === 'red' ? 'w' : 'b';
@@ -37,14 +39,15 @@ export async function verifyChallenge(definition: ChallengeDefinition, engine: E
   async function solve(fen: string, target: string | null, remaining: number): Promise<Proof | null> {
     const key = `${positionKey(fen)}|${target}|${remaining}`;
     if (memo.has(key)) return memo.get(key)!;
-    const moves = await legal(fen);
     const ownTurn = fen.split(' ')[1] === playerTurn;
+    // No player moves remain: an opponent turn that could complete mate was already checked.
+    if (ownTurn && remaining === 0) { memo.set(key, null); return null; }
+    const moves = await legal(fen);
     if (!moves.length) {
       const success = !ownTurn && definition.goal.type === 'CHECKMATE' && await engine.isCheck(fen);
       const proof = success ? { hints: {}, replies: 0, line: [] } : null;
       memo.set(key, proof); return proof;
     }
-    if (ownTurn && remaining === 0) { memo.set(key, null); return null; }
     const ordered = ownTurn ? [...moves].sort((a, b) => {
       const priority = (move: Move) => {
         const preferred = definition.preferredMoves.findIndex(item => item.from === move.from && item.to === move.to);
@@ -92,8 +95,28 @@ export async function verifyChallenge(definition: ChallengeDefinition, engine: E
     }
   }
   if (!reference) throw new Error(`${definition.id}: reference loadout has no forced solution within ${definition.maxPlayerMoves} player moves`);
+  const requiredAbilityChecks: VerificationResult['requiredAbilityChecks'] = [];
+  for (const upgrade of definition.requiredUpgrades ?? []) {
+    const upgradedFen = applyLoadoutsToFen(definition.initialFen, definition.referenceLoadouts, definition.playerColor);
+    const board = fenToBoard(upgradedFen), { col, row } = uciToPos(upgrade.position);
+    const info = UPGRADES[upgrade.upgradeId];
+    const red = definition.playerColor === 'red';
+    if (board[9 - row][col] !== (red ? info.symbolRed : info.symbolBlack)) throw new Error(`${definition.id}: required ability must match the reference piece`);
+    const original = { TIAN_MA: 'n', FEI_XIANG: 'b', PO_JI_PAO: 'c', TU_JI_BING: 'p' }[upgrade.upgradeId];
+    board[9 - row][col] = red ? original.toUpperCase() : original;
+    const fields = upgradedFen.split(' ');
+    const ordinaryFen = boardToFen(board, fields[1] as 'w' | 'b', Number(fields[4]), Number(fields[5]));
+    // Reuse exhaustive configuration proof, including a legal ordinary-piece control.
+    // Remove this field to avoid recursive ability checks. A search limit remains an error.
+    const comparison = await verifyChallenge({ ...definition, requiredUpgrades: undefined, initialFen: ordinaryFen,
+      budget: info.cost, allowedUpgrades: [upgrade], referenceLoadouts: [upgrade] }, engine, maxPositions);
+    const ordinarySolvable = comparison.configurations.find(config => config.loadouts.length === 0)!.solvable;
+    if (ordinarySolvable) throw new Error(`${definition.id}: ${upgrade.upgradeId} at ${upgrade.position} is not necessary within the move limit`);
+    requiredAbilityChecks.push({ ...upgrade, ordinarySolvable, positionsQueried: comparison.positionsQueried });
+  }
   return { id: definition.id, configurations: results, referenceMinimumMoves, referenceLine: reference.line,
-    opponentRepliesVerified: reference.replies, positionsQueried: legalCache.size, hints: allHints };
+    opponentRepliesVerified: reference.replies, positionsQueried: legalCache.size, hints: allHints,
+    ...(requiredAbilityChecks.length ? { requiredAbilityChecks } : {}) };
 }
 
 /** Verify shipped hints independently: every hinted choice must retain a forced solution. */

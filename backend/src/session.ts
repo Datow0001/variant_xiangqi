@@ -96,7 +96,8 @@ export class GameSession {
       this.gameOverReason = check ? 'CHECKMATE' : 'STALEMATE';
       if (this.challenge) {
         const success = this.winner === this.playerColor && check && this.challenge.definition.goal.type === 'CHECKMATE';
-        this.challenge.settle(success ? 'SUCCEEDED' : 'FAILED', success ? 'CHECKMATE' : this.winner !== this.playerColor ? 'PLAYER_DEFEATED' : 'OBJECTIVE_NOT_MET');
+        const stalemateNotMate = this.winner === this.playerColor && !check && this.challenge.definition.goal.type === 'CHECKMATE';
+        this.challenge.settle(success ? 'SUCCEEDED' : 'FAILED', success ? 'CHECKMATE' : this.winner !== this.playerColor ? 'PLAYER_DEFEATED' : stalemateNotMate ? 'STALEMATE_NOT_MATE' : 'OBJECTIVE_NOT_MET');
       }
       this.finish();
     }

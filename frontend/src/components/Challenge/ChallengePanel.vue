@@ -5,6 +5,7 @@ const store = useGameStore();
 const challenge = computed(() => store.gameState?.challenge);
 const reasons: Record<string, string> = {
   CHECKMATE: '已完成限步將殺。', TARGET_CAPTURED: '已吃掉指定目標。', MOVE_LIMIT: '已用完允許步數，尚未完成目標。',
+  STALEMATE_NOT_MATE: '對手已無合法走法，但沒有受到將軍，這是困斃。本關必須將死，困斃不算過關。',
   PLAYER_DEFEATED: '玩家已被擊敗。', OBJECTIVE_NOT_MET: '對局結束，但未達成本關目標。', RESIGN: '已放棄本次挑戰。', INTERRUPTED: '連線或引擎中斷，本次不計失敗。',
 };
 </script>

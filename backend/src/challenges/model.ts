@@ -12,6 +12,8 @@ export interface ChallengeDefinition extends ChallengeSummary {
   commonMistake: string;
   referenceLoadouts: LoadoutItem[];
   preferredMoves: Move[];
+  /** Each listed upgrade must be necessary for a forced solution within the move limit. */
+  requiredUpgrades?: LoadoutItem[];
 }
 export function positionKey(fen: string): string { return fen.split(' ').slice(0, 2).join(' '); }
 export function position(pieces: Record<string, string>, turn: 'w' | 'b' = 'w'): string {
@@ -25,5 +27,6 @@ export const move = (from: string, to: string): Move => ({ from, to });
 type Spec = Omit<ChallengeDefinition, 'movetimeMs' | 'hintBranches' | 'nextChallengeId' | 'contentVersion' | 'playerColor' | 'referenceLoadouts' | 'allowedUpgrades' | 'budget'> &
   Partial<Pick<ChallengeDefinition, 'playerColor' | 'referenceLoadouts' | 'allowedUpgrades' | 'budget' | 'contentVersion'>>;
 export function define(spec: Spec): ChallengeDefinition {
-  return { movetimeMs: 300, hintBranches: {}, nextChallengeId: null, contentVersion: 1, playerColor: 'red', referenceLoadouts: [], allowedUpgrades: [], budget: 0, ...spec };
+  return { movetimeMs: 300, hintBranches: {}, nextChallengeId: null, contentVersion: 1, playerColor: 'red', referenceLoadouts: [], allowedUpgrades: [], budget: 0, ...spec,
+    goalText: spec.goal.type === 'CHECKMATE' ? `${spec.goalText}（困斃不算）` : spec.goalText };
 }

@@ -48,6 +48,6 @@ export class ChallengeRuntime {
       playerMoves: this.playerMoves, remainingMoves: Math.max(0, this.definition.maxPlayerMoves - this.playerMoves), targetSquare: this.targetSquare,
       directionHintUses: this.directionHintUses, moveHintUses: this.moveHintUses, hints: this.hints.map(hint => ({ ...hint, move: hint.move && { ...hint.move } })),
       stars: this.stars, explanation: this.outcome === 'SUCCEEDED' ? this.definition.completionExplanation : null,
-      failureExplanation: this.outcome === 'FAILED' ? this.definition.commonMistake : null };
+      failureExplanation: this.outcome === 'FAILED' && this.reason !== 'STALEMATE_NOT_MATE' ? this.definition.commonMistake : null };
   }
 }

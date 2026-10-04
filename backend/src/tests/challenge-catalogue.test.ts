@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { CHALLENGES, getChallenge, publicChallenge } from '../challenges';
+import { CHALLENGES, getChallenge, publicChallenge, validateChallengeDefinition } from '../challenges';
 import { FairyEngine } from '../FairyEngine';
 import { configurations, verifyChallenge, verifyHints } from '../challenges/verify';
 import { applyLoadoutsToFen, validateInitialFen } from '../../../shared/fen';
@@ -13,7 +13,7 @@ test('catalogue has 20 linked levels, 5 chapters, and no private answers in summ
   for (const [index, definition] of CHALLENGES.entries()) {
     assert.equal(definition.nextChallengeId, CHALLENGES[index + 1]?.id ?? null);
     const summary = publicChallenge(definition);
-    for (const key of ['initialFen', 'hintBranches', 'preferredMoves', 'referenceLoadouts', 'commonMistake', 'completionExplanation']) assert.equal(key in summary, false);
+    for (const key of ['initialFen', 'hintBranches', 'preferredMoves', 'referenceLoadouts', 'requiredUpgrades', 'commonMistake', 'completionExplanation']) assert.equal(key in summary, false);
     for (const loadout of definition.referenceLoadouts) assert.ok(definition.allowedUpgrades.some(item => item.position === loadout.position && item.upgradeId === loadout.upgradeId));
     normalizeStart({ gameMode: 'CHALLENGE', challengeId: definition.id, loadouts: definition.referenceLoadouts });
     for (const loadouts of configurations(definition)) validateInitialFen(applyLoadoutsToFen(definition.initialFen, loadouts, definition.playerColor));
@@ -29,6 +29,11 @@ test('real engine proves every level and all defensive branches; advanced levels
     for (const definition of CHALLENGES) {
       const result = await verifyChallenge(definition, engine);
       await verifyHints(definition, result.hints);
+      if ([13, 14, 18, 19, 20].includes(definition.order)) {
+        assert.ok(definition.requiredUpgrades?.length, `${definition.id}: must declare its essential ability`);
+        assert.equal(result.requiredAbilityChecks?.length, definition.requiredUpgrades.length);
+        for (const control of result.requiredAbilityChecks!) assert.equal(control.ordinarySolvable, false, definition.id);
+      }
       assert.ok(result.referenceMinimumMoves <= definition.maxPlayerMoves);
       if (definition.chapter >= 4) {
         assert.equal(result.referenceMinimumMoves, definition.maxPlayerMoves, definition.id);
@@ -43,6 +48,19 @@ test('real engine proves every level and all defensive branches; advanced levels
       if (definition.allowedUpgrades.length) assert.equal(result.configurations.find(config => config.loadouts.length === 0)?.solvable, false, definition.id);
       if (['budget-choice', 'which-knight', 'build-a-screen'].includes(definition.id)) assert.equal(result.configurations.filter(config => config.solvable).length, 1);
     }
+  } finally { engine.destroy(); }
+});
+
+test('ability audit rejects decorative upgrades and invalid ordinary-piece controls', async () => {
+  const engine = new FairyEngine();
+  try {
+    await engine.waitReady();
+    await assert.rejects(verifyChallenge({ ...getChallenge('palace-finale')!,
+      requiredUpgrades: [{ position: 'c7', upgradeId: 'TU_JI_BING' }] }, engine), /not necessary/);
+    await assert.rejects(verifyChallenge({ ...getChallenge('elephant-interlock')!,
+      requiredUpgrades: [{ position: 'c8', upgradeId: 'FEI_XIANG' }] }, engine), /Traditional elephant crossed river/);
+    assert.throws(() => validateChallengeDefinition({ ...getChallenge('rook-mate')!,
+      requiredUpgrades: [{ position: 'e7', upgradeId: 'TIAN_MA' }] }), /Required ability must match/);
   } finally { engine.destroy(); }
 });
 

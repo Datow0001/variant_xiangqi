@@ -11,6 +11,8 @@ test('challenge catalogue exposes summaries and rejects client-authored rules an
   for (const definition of CHALLENGES) {
     validateChallengeDefinition(definition);
     const summary = publicChallenge(definition);
+    if (definition.goal.type === 'CHECKMATE') assert.match(summary.goalText, /將死.*困斃不算/);
+    else assert.doesNotMatch(summary.goalText, /困斃不算/);
     assert.equal('initialFen' in summary, false); assert.equal('hintBranches' in summary, false); assert.equal('goal' in summary, false);
   }
   for (const extra of [{ initialFen: CHALLENGES[0].initialFen }, { maxPlayerMoves: 99 }, { budget: 10 }, { playerColor: 'black' }, { challengeId: 'unknown' }, { loadouts: [{ position: 'b0', upgradeId: 'TIAN_MA' }] }]) {
@@ -111,7 +113,12 @@ test('stalemate does not satisfy checkmate goal, and an AI checkmate fails the c
       await session.init();
       const final = await session.makePlayerMove(aiDefeat ? 'a5' : 'e7', aiDefeat ? 'a4' : 'e6', 0);
       assert.equal(final.challenge?.outcome, 'FAILED');
-      assert.equal(final.challenge?.reason, aiDefeat ? 'PLAYER_DEFEATED' : 'OBJECTIVE_NOT_MET');
+      assert.equal(final.challenge?.reason, aiDefeat ? 'PLAYER_DEFEATED' : 'STALEMATE_NOT_MATE');
+      if (!aiDefeat) {
+        assert.equal(final.winner, 'red');
+        assert.equal(final.gameOverReason, 'STALEMATE');
+        assert.equal(final.challenge?.failureExplanation, null);
+      }
     } finally { session.destroy(); }
   }
 });

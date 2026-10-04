@@ -37,6 +37,14 @@ export function validateChallengeDefinition(definition: ChallengeDefinition): vo
   const referenceCost = definition.referenceLoadouts.reduce((sum, item) => sum + (UPGRADES[item.upgradeId]?.cost ?? Infinity), 0);
   if (referenceCost > definition.budget || new Set(definition.referenceLoadouts.map(item => item.position)).size !== definition.referenceLoadouts.length ||
       definition.referenceLoadouts.some(item => !definition.allowedUpgrades.some(allowed => item.position === allowed.position && item.upgradeId === allowed.upgradeId))) throw new Error('Invalid reference loadout');
+  const referenceBoard = fenToBoard(applyLoadoutsToFen(definition.initialFen, definition.referenceLoadouts, definition.playerColor));
+  const requiredPositions = new Set<string>();
+  for (const item of definition.requiredUpgrades ?? []) {
+    if (!isValidUci(item.position) || !Object.hasOwn(UPGRADES, item.upgradeId) || requiredPositions.has(item.position)) throw new Error('Invalid required ability');
+    requiredPositions.add(item.position);
+    const { col, row } = uciToPos(item.position), upgrade = UPGRADES[item.upgradeId];
+    if (referenceBoard[9 - row][col] !== (definition.playerColor === 'red' ? upgrade.symbolRed : upgrade.symbolBlack)) throw new Error('Required ability must match the reference piece');
+  }
   if (definition.goal.type === 'CAPTURE') {
     if (!isValidUci(definition.goal.targetSquare)) throw new Error('Invalid challenge target');
     const { col, row } = uciToPos(definition.goal.targetSquare);

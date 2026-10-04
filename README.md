@@ -3,6 +3,7 @@
 一個支援局前構築（Loadout）、升級自訂棋子能力（天馬、飛象、霰彈砲、突擊兵），並能與多階 AI 進行即時對弈的現代化中國象棋變體系統。
 
 目前棋子規則、關卡盤面檢查與最新驗收結果見 [規則與關卡品質](./RULES_AND_CHALLENGE_QUALITY.md)。
+第 13、14、18、19、20 關已改為需要特色能力的多步題，詳見 [特色能力盤點與重設](./CHALLENGE_VARIANT_AUDIT.md)。
 
 本專案採用 **全端 TypeScript (Full-Stack TypeScript)** 架構：**Vue 3 (前端) + Node.js (後端)**，透過 `shared/` 模組達成前後端 100% 型別與資料結構共用。
 

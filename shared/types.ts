@@ -79,7 +79,7 @@ export interface ChallengeSummary {
   nextChallengeId: string | null;
 }
 export type ChallengeOutcome = 'ACTIVE' | 'SUCCEEDED' | 'FAILED' | 'INTERRUPTED';
-export type ChallengeReason = 'CHECKMATE' | 'TARGET_CAPTURED' | 'MOVE_LIMIT' | 'PLAYER_DEFEATED' | 'OBJECTIVE_NOT_MET' | 'RESIGN' | 'INTERRUPTED';
+export type ChallengeReason = 'CHECKMATE' | 'TARGET_CAPTURED' | 'MOVE_LIMIT' | 'PLAYER_DEFEATED' | 'OBJECTIVE_NOT_MET' | 'STALEMATE_NOT_MATE' | 'RESIGN' | 'INTERRUPTED';
 export interface ChallengeHint {
   level: 'DIRECTION' | 'MOVE';
   text: string;

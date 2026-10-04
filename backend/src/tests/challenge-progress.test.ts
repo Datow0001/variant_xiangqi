@@ -7,6 +7,22 @@ import { persistProgress } from '../../../frontend/src/services/progressStorage'
 
 const catalogue = CHALLENGES.map(publicChallenge);
 
+test('feature redesign invalidates only the five revised levels and retains the other fifteen', () => {
+  const changed = new Set([13, 14, 18, 19, 20]);
+  const progress = emptyProgress();
+  for (const definition of catalogue) {
+    const previous = { ...definition, contentVersion: definition.contentVersion - (changed.has(definition.order) ? 1 : 0) };
+    recordAchievement(progress, previous, 3);
+    rememberSelection(progress, previous, [], 100);
+  }
+  const current = reconcileProgress(progress, catalogue);
+  assert.equal(Object.keys(current.records).length, 15);
+  for (const definition of catalogue) {
+    assert.equal(!!current.records[definition.id], !changed.has(definition.order), definition.id);
+    assert.equal(!!current.preferences[definition.id], !changed.has(definition.order), definition.id);
+  }
+});
+
 test('quality revisions discard only changed-level scores and obsolete loadout coordinates', () => {
   const previous = catalogue.map(def => ({ ...def }));
   const changed = new Set(['rook-mate', 'elephant-cross', 'screen-team', 'budget-choice', 'which-knight', 'build-a-screen', 'elephant-interlock']);
